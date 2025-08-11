@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Chocolatey Package Scanner & Exporter
-// @namespace    http://tampermonkey.net/
-// @version      2025-08-15
-// @description  Scans Chocolatey packages, enriches data with a resumable AI process, supports smart updates, and provides a single-file export.
+// @namespace    NoNinite - Chocolatey Package Scanner & AI Enrichment Tool
+// @version      2025-08-17
+// @description  This tool automates the tedious process of scanning, gathering, categorizing, and cross-referencing thousands of software packages, ensuring the data used by NoNinite is always up-to-date and incredibly detailed.
 // @author       Matthew Parker
 // @match        https://community.chocolatey.org/packages*
 // @grant        GM_addStyle
@@ -120,10 +120,10 @@
 
                 <div class="control-group">
                     <h3>2. AI Data Enrichment</h3>
-                     <p>Adds categories and attempts to find Winget IDs. Requires a Gemini API Key. Process is resumable.</p>
+                     <p>Adds a comprehensive data profile to each package. Requires a Gemini API Key. Process is resumable.</p>
                      <label>Gemini API Key: <input type="password" id="api-key-input" class="input-field" style="width: 300px;"></label>
                     <br>
-                    <button class="action-btn ai-btn" disabled><i class="fas fa-magic"></i> Categorize</button>
+                    <button class="action-btn ai-btn" disabled><i class="fas fa-magic"></i> Enrich Data</button>
                     <button class="action-btn resume-btn" style="display: none;"><i class="fas fa-play-circle"></i> Resume</button>
                     <div id="ai-results">Waiting for scan to complete.</div>
                     <div class="progress-bar-container"><div class="progress-bar"></div></div>
@@ -142,6 +142,7 @@
     // --- VARIABLES & STATE ---
     let packageData = [];
     let isCategorizing = false;
+    const BATCH_SIZE = 20;
     const scannerBtn = document.querySelector('.scanner-btn');
     const modalContent = document.querySelector('.scanner-modal-content');
     const closeBtn = document.querySelector('.close-btn');
@@ -170,7 +171,7 @@
     }
 
     function updateUIState() {
-        const unprocessedCount = packageData.filter(p => !p.mainCategory).length;
+        const unprocessedCount = packageData.filter(p => !p.categorization).length;
         const processedCount = packageData.length - unprocessedCount;
 
         if (packageData.length > 0) {
@@ -181,11 +182,11 @@
             if (unprocessedCount > 0 && processedCount > 0) {
                 resumeBtn.style.display = 'inline-block';
                 aiBtn.style.display = 'none';
-                aiResults.textContent = `${processedCount} packages already categorized. Resume to process the remaining ${unprocessedCount}.`;
+                aiResults.textContent = `${processedCount} packages already enriched. Resume to process the remaining ${unprocessedCount}.`;
             } else {
                 resumeBtn.style.display = 'none';
                 aiBtn.style.display = 'inline-block';
-                aiResults.textContent = unprocessedCount === 0 ? 'All packages are already categorized.' : 'Ready to categorize.';
+                aiResults.textContent = unprocessedCount === 0 ? 'All packages are already enriched.' : 'Ready to enrich data.';
             }
         } else {
             scanResults.textContent = 'Ready to perform a full scan.';
@@ -196,7 +197,6 @@
             resumeBtn.style.display = 'none';
         }
     }
-
 
     // --- CORE FUNCTIONS ---
 
@@ -239,16 +239,13 @@
     }
 
     async function fullRescan() {
-        if (!confirm("Starting a full rescan will erase all previously scanned and categorized data. This is recommended only if you suspect major changes or issues. Continue?")) {
+        if (!confirm("Starting a full rescan will erase all previously scanned and enriched data. This is recommended only if you suspect major changes or issues. Continue?")) {
             return;
         }
-        packageData = []; // Clear previous data
-        saveState(); // Persist the cleared data
+        packageData = [];
+        saveState();
 
-        scanBtn.disabled = true;
-        updateBtn.disabled = true;
-        aiBtn.disabled = true;
-        exportBtn.disabled = true;
+        scanBtn.disabled = true; updateBtn.disabled = true; aiBtn.disabled = true; exportBtn.disabled = true;
         scanResults.textContent = 'Starting full rescan...';
 
         let currentPage = 1;
@@ -271,14 +268,12 @@
         }
 
         saveState();
-        scanBtn.disabled = false;
-        updateBtn.disabled = false;
+        scanBtn.disabled = false; updateBtn.disabled = false;
         updateUIState();
     }
 
     async function checkForUpdates() {
-        scanBtn.disabled = true;
-        updateBtn.disabled = true;
+        scanBtn.disabled = true; updateBtn.disabled = true;
         scanResults.textContent = 'Checking for updates on page 1...';
 
         try {
@@ -293,17 +288,13 @@
             firstPagePackages.forEach(newPage => {
                 const existingIndex = packageData.findIndex(oldPage => oldPage.name === newPage.name);
                 if (existingIndex !== -1) {
-                    // Package exists, check for updates
-                    const oldPage = packageData[existingIndex];
+                    const oldPackage = packageData[existingIndex];
                     if (oldPage.version !== newPage.version || oldPage.downloads !== newPage.downloads) {
-                        // Preserve AI data
-                        const aiData = { mainCategory: oldPage.mainCategory, subCategories: oldPage.subCategories, wingetId: oldPage.wingetId };
-                        packageData[existingIndex] = { ...newPage, ...aiData };
+                        packageData[existingIndex] = { ...oldPackage, ...newPage };
                         updatedCount++;
                     }
                 } else {
-                    // New package
-                    packageData.unshift(newPage); // Add to the beginning of the list
+                    packageData.unshift(newPage);
                     newCount++;
                 }
             });
@@ -314,8 +305,7 @@
             scanResults.textContent = `Error checking for updates: ${error.message}`;
         }
 
-        scanBtn.disabled = false;
-        updateBtn.disabled = false;
+        scanBtn.disabled = false; updateBtn.disabled = false;
         updateUIState();
     }
 
@@ -331,11 +321,25 @@
                     responseSchema: {
                         type: "OBJECT",
                         properties: {
-                            "mainCategory": { "type": "STRING", "description": "A single, broad category like 'Developer Tools', 'Utilities', 'Browsers', 'Media', 'Security'." },
-                            "subCategories": { "type": "ARRAY", "items": { "type": "STRING" }, "description": "An array of more specific sub-categories." },
-                            "wingetId": { "type": "STRING", "description": "The most likely Winget ID for the package. Return 'N/A' if unsure." }
-                        },
-                        required: ["mainCategory", "subCategories", "wingetId"]
+                            "packages": {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        "name": { type: "STRING" },
+                                        "slug": { type: "STRING" },
+                                        "oneLiner": { type: "STRING" },
+                                        "officialWebsite": { type: "STRING" },
+                                        "categorization": { type: "OBJECT", properties: { "mainCategory": { type: "STRING" }, "subCategories": { type: "ARRAY", items: { type: "STRING" } }, "packageType": { type: "STRING" }, "uiKeywords": { type: "ARRAY", items: { type: "STRING" } } } },
+                                        "userProfile": { type: "OBJECT", properties: { "targetAudience": { type: "ARRAY", items: { type: "STRING" } }, "setupComplexity": { type: "STRING" } } },
+                                        "packageManagers": { type: "OBJECT", properties: { "preference": { type: "STRING" }, "preferenceReason": { type: "STRING" }, "winget": { type: "OBJECT", properties: { "id": { type: "STRING" }, "command": { type: "STRING" } } } } },
+                                        "technicalDetails": { type: "OBJECT", properties: { "licenseType": { type: "STRING" }, "requiresAdmin": { type: "BOOLEAN" }, "unattendedInstallConfidence": { type: "STRING" } } },
+                                        "metadata": { type: "OBJECT", properties: { "alternativeTo": { type: "ARRAY", items: { type: "STRING" } }, "relatedPackages": { type: "ARRAY", items: { type: "STRING" } }, "updateFrequency": { type: "STRING" } } }
+                                    },
+                                    required: ["name", "slug", "oneLiner", "officialWebsite", "categorization", "userProfile", "packageManagers", "technicalDetails", "metadata"]
+                                }
+                            }
+                        }
                     }
                 }
             };
@@ -387,44 +391,81 @@
         progressBarContainer.style.display = 'block';
 
         const packagesToProcess = packageData.map((pkg, index) => ({ ...pkg, originalIndex: index }))
-                                             .filter(pkg => !pkg.mainCategory || pkg.mainCategory === "Error");
+                                             .filter(pkg => !pkg.categorization);
         const totalToProcess = packagesToProcess.length;
         if (totalToProcess === 0) {
-            aiResults.textContent = "All packages are already categorized.";
+            aiResults.textContent = "All packages are already enriched.";
             isCategorizing = false;
             updateUIState();
             return;
         }
 
-        let processedCount = 0;
+        const batches = [];
+        for (let i = 0; i < totalToProcess; i += BATCH_SIZE) {
+            batches.push(packagesToProcess.slice(i, i + BATCH_SIZE));
+        }
 
-        for (const pkg of packagesToProcess) {
-            const progress = ((processedCount + 1) / totalToProcess) * 100;
+        for (let i = 0; i < batches.length; i++) {
+            const batch = batches[i];
+            const progress = ((i + 1) / batches.length) * 100;
             progressBar.style.width = `${progress}%`;
-            aiResults.textContent = `Processing ${processedCount + 1} of ${totalToProcess}: ${pkg.name}`;
+            aiResults.textContent = `Processing Batch ${i + 1} of ${batches.length}...`;
 
-            const prompt = `Analyze the following software package and return its categorization and most likely Winget ID.
-                - Name: "${pkg.name}" - Description: "${pkg.description}" - Tags: "${pkg.tags}"
-                Provide: 1. A single, broad 'mainCategory'. 2. An array of specific 'subCategories'. 3. The most probable Winget Package ID (or "N/A").`;
+            const prompt = `
+                Analyze this JSON array of software packages. For each package, provide a comprehensive data profile.
+                Return a single JSON object with a "packages" key, containing an array of objects matching the input.
+
+                **Response Schema for each package object:**
+                - "name": (string) Must match the input name exactly.
+                - "slug": (string) A clean, URL-friendly, kebab-case version of the name.
+                - "oneLiner": (string) A very concise, one-sentence summary.
+                - "officialWebsite": (string) The official homepage URL of the software.
+                - "categorization": (object) with keys:
+                    - "mainCategory": (string) e.g., "Developer Tools", "Utilities", "Browsers", "Media", "Security".
+                    - "subCategories": (array of strings)
+                    - "packageType": (string) One of: "Application", "Driver", "Runtime", "System Tool", "Font", "Browser Extension", "Other".
+                    - "uiKeywords": (array of strings) e.g., "modern", "minimalist", "classic UI", "dark mode".
+                - "userProfile": (object) with keys:
+                    - "targetAudience": (array of strings) e.g., "Developer", "Gamer", "Power User", "Designer", "System Administrator", "General User".
+                    - "setupComplexity": (string) One of: "Simple", "Intermediate", "Complex".
+                - "packageManagers": (object) with keys:
+                    - "preference": (string) "Winget" or "Chocolatey".
+                    - "preferenceReason": (string) A short explanation for the preference.
+                    - "winget": (object) with "id" (string, or "N/A") and "command" (string, or "N/A").
+                - "technicalDetails": (object) with keys:
+                    - "licenseType": (string) One of: "FOSS", "Freeware", "Freemium", "Commercial".
+                    - "requiresAdmin": (boolean).
+                    - "unattendedInstallConfidence": (string) One of: "High", "Medium", "Low".
+                - "metadata": (object) with keys:
+                    - "alternativeTo": (array of strings).
+                    - "relatedPackages": (array of strings).
+                    - "updateFrequency": (string) One of: "Frequently", "Occasionally", "Infrequently", "Unknown".
+
+                **Input Packages:**
+                ${JSON.stringify(batch.map(p => ({name: p.name, description: p.description, tags: p.tags})))}
+            `;
+
             try {
                 const result = await callGeminiWithBackoff(apiKey, prompt);
-                packageData[pkg.originalIndex].mainCategory = result.mainCategory || "Uncategorized";
-                packageData[pkg.originalIndex].subCategories = result.subCategories || [];
-                packageData[pkg.originalIndex].wingetId = result.wingetId || "N/A";
-            } catch (error) {
-                console.error(`Failed to process package "${pkg.name}":`, error);
-                packageData[pkg.originalIndex].mainCategory = "Error";
-                packageData[pkg.originalIndex].subCategories = [error.message || "Unknown error"];
-                packageData[pkg.originalIndex].wingetId = "Error";
-                if (error.status === 400 || error.status === 403) {
-                    aiResults.textContent = `Critical API Error: ${error.message}. Please check your API key. Aborting.`;
-                    isCategorizing = false;
-                    updateUIState();
-                    return;
+                if (result.packages && Array.isArray(result.packages)) {
+                    result.packages.forEach(resPkg => {
+                        const originalPackage = batch.find(p => p.name === resPkg.name);
+                        if (originalPackage) {
+                            // Merge new AI data with existing raw data
+                            const originalRawData = packageData[originalPackage.originalIndex];
+                            packageData[originalPackage.originalIndex] = { ...originalRawData, ...resPkg };
+                        }
+                    });
                 }
-            } finally {
-                processedCount++;
-                saveState(); // Save after each package
+                saveState();
+            } catch (error) {
+                console.error(`Failed to process batch ${i + 1}:`, error);
+                aiResults.textContent = `Error on batch ${i + 1}: ${error.message}. Aborting.`;
+                batch.forEach(pkg => { packageData[pkg.originalIndex].categorization = { mainCategory: "Error" }; });
+                saveState();
+                isCategorizing = false;
+                updateUIState();
+                return;
             }
         }
 
