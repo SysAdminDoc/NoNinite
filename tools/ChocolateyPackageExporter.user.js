@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Chocolatey Package Scanner & Exporter
-// @namespace    NoNinite - Chocolatey Package Scanner & AI Enrichment Tool
-// @version      2025-08-17
-// @description  This tool automates the tedious process of scanning, gathering, categorizing, and cross-referencing thousands of software packages, ensuring the data used by NoNinite is always up-to-date and incredibly detailed.
+// @name         Chocolatey Package Scanner & Exporter v7
+// @namespace    Chocolatey Package Scanner & Exporter
+// @version      2.0
+// @description  Scans Chocolatey packages, enriches data with a comprehensive, resumable, batch-based AI process, supports smart updates, and provides a single-file export.
 // @author       Matthew Parker
 // @match        https://community.chocolatey.org/packages*
 // @grant        GM_addStyle
