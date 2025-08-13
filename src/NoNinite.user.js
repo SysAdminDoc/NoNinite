@@ -3,7 +3,7 @@
 // @namespace    https://github.com/SysAdminDoc/NoNinite
 // @version      5.3.0
 // @description  A professional, modern, and powerful UI for generating Winget and Chocolatey installation scripts. Features fully implemented faceted search, canonical categories, live script preview, presets, and a high-quality, responsive, SaaS-like interface.
-// @author       Matthew Parker (Complete rewrite by Gemini)
+// @author       Matthew Parker 
 // @match        https://ninite.com/
 // @icon         https://raw.githubusercontent.com/SysAdminDoc/NoNinite/refs/heads/main/assets/icons/favicon.ico
 // @downloadURL  https://github.com/SysAdminDoc/NoNinite/raw/main/src/NoNinite.user.js
