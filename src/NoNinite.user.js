@@ -1,31 +1,26 @@
 // ==UserScript==
-// @name         NoNinite: Winget & Chocolatey Script Generator
+// @name         NoNinite: Production-Grade Script Generator
 // @namespace    https://github.com/SysAdminDoc/NoNinite
-// @version      3.3.4
-// @description  NoNinite is a userscript that transforms ninite.com. It keeps the familiar domain but replaces every function of the site adding more applications, customization tools, and using modern package managers (Winget and Chocolatey) instead of old-school Ninite installers.
-// @author       Matthew Parker
+// @version      5.3.0
+// @description  A professional, modern, and powerful UI for generating Winget and Chocolatey installation scripts. Features fully implemented faceted search, canonical categories, live script preview, presets, and a high-quality, responsive, SaaS-like interface.
+// @author       Matthew Parker (Complete rewrite by Gemini)
 // @match        https://ninite.com/
 // @icon         https://raw.githubusercontent.com/SysAdminDoc/NoNinite/refs/heads/main/assets/icons/favicon.ico
-// @downloadURL  https://github.com/SysAdminDoc/NoNinite/raw/refs/heads/main/NoNinite.user.js
-// @updateURL    https://github.com/SysAdminDoc/NoNinite/raw/refs/heads/main/NoNinite.user.js
+// @downloadURL  https://github.com/SysAdminDoc/NoNinite/raw/main/src/NoNinite.user.js
+// @updateURL    https://github.com/SysAdminDoc/NoNinite/raw/main/src/NoNinite.user.js
 // @grant        GM_addStyle
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_setClipboard
 // @grant        GM_xmlhttpRequest
-// @grant        GM_listValues
-// @grant        GM_deleteValue
 // @connect      raw.githubusercontent.com
-// @connect      icons.duckduckgo.com
-// @connect      www.google.com
-// @connect      s2.googleusercontent.com
-// @require      https://code.jquery.com/jquery-3.6.4.min.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/masonry/4.2.2/masonry.pkgd.min.js
+// @connect      community.chocolatey.org
+// @require      https://code.jquery.com/jquery-3.7.1.min.js
 // @require      https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js
 // @run-at       document-start
 // ==/UserScript==
 
-/* jshint esversion: 8 */
+/* jshint esversion: 11 */
 
 // Hide the body immediately to prevent FOUC (Flash of Unstyled Content)
 GM_addStyle('body { visibility: hidden; }');
@@ -33,1509 +28,1891 @@ GM_addStyle('body { visibility: hidden; }');
 (async function () {
     'use strict';
 
-    // ---------- Defaults (built-ins) ----------
-    const defaultAppData = {}; // This will be populated from the fetched source
+    // -----------------------------------------------------------------------------
+    //  CONFIG, CONSTANTS & DATA MAPS
+    // -----------------------------------------------------------------------------
 
-    const faviconOverrides = {
-        "1password": "https://1password.com/favicon.ico",
-        "7zip": "https://www.7-zip.org/7ziplogo.png",
-        "Adobe Acrobat Reader DC": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Adobe_Acrobat_DC_logo_2020.svg/256px-Adobe_Acrobat_DC_logo_2020.svg.png",
-        "AdvancedRenamer": "https://www.advancedrenamer.com/favicon.ico",
-        "Aegisub": "https://raw.githubusercontent.com/Aegisub/Aegisub/master/aegisub/bitmaps/icons/aegisub.ico",
-        "affine": "https://affine.pro/favicon.ico",
-        "aimp": "https://www.aimp.ru/favicon.ico",
-        "Alacritty": "https://raw.githubusercontent.com/alacritty/alacritty/master/extra/logo/alacritty-simple.svg",
-        "AmbieWhiteNoise": "https://ambieapp.com/favicon.ico",
-        "anaconda3": "https://www.anaconda.com/favicon.ico",
-        "angryipscanner": "https://angryip.org/favicon.ico",
-        "Anki": "https://apps.ankiweb.net/logo.svg",
-        "anydesk": "https://anydesk.com/favicon.ico",
-        "Audacity": "https://www.audacityteam.org/favicon.svg",
-        "autodarkmode": "https://raw.githubusercontent.com/AutoDarkMode/Windows-Auto-Night-Mode/master/Assets/Icons/AppIcon.ico",
-        "autohotkey": "https://www.autohotkey.com/favicon.ico",
-        "autoruns": "https://learn.microsoft.com/favicon.ico",
-        "azuredatastudio": "https://azure.microsoft.com/favicon.ico",
-        "barrier": "https://raw.githubusercontent.com/debauchee/barrier/master/res/barrier.ico",
-        "bat": "https://raw.githubusercontent.com/sharkdp/bat/master/assets/bat_logo.svg",
-        "betterbird": "https://www.betterbird.eu/favicon.ico",
-        "bitwarden": "https://bitwarden.com/favicon.ico",
-        "bleachbit": "https://www.bleachbit.org/favicon.ico",
-        "blender": "https://www.blender.org/favicon.ico",
-        "BorderlessGaming": "https://raw.githubusercontent.com/Codeusa/Borderless-Gaming/master/resources/Icon.ico",
-        "brave": "https://brave.com/static-assets/images/brave-favicon.svg",
-        "bulkcrapuninstaller": "https://www.bcuninstaller.com/favicon.ico",
-        "bulkrenameutility": "https://www.bulkrenameutility.co.uk/favicon.ico",
-        "calibre": "https://calibre-ebook.com/favicon.ico",
-        "capframex": "https://www.capframex.com/favicon.ico",
-        "Carnac": "http://carnackeys.com/images/octocat-2x.png",
-        "cemu": "https://cemu.info/favicon.ico",
-        "chatterino": "https://chatterino.com/favicon.ico",
-        "chrome": "https://www.google.com/chrome/static/images/favicons/favicon-96x96.png",
-        "chromium": "https://www.chromium.org/favicon.ico",
-        "clementine": "https://www.clementine-player.org/favicon.ico",
-        "Clink": "https://raw.githubusercontent.com/chrisant996/clink/master/clink/res/clink.ico",
-        "clonehero": "https://clonehero.net/favicon.ico",
-        "cmake": "https://cmake.org/favicon.ico",
-        "CompactGUI": "https://raw.githubusercontent.com/ImminentFate/CompactGUI/master/Compact/Images/app.ico",
-        "copyq": "https://hluk.github.io/CopyQ/favicon.ico",
-        "cpuz": "https://www.cpuid.com/favicon.ico",
-        "croc": "https://schollz.com/favicon.ico",
-        "crystaldiskinfo": "https://crystalmark.info/favicon.ico",
-        "crystaldiskmark": "https://crystalmark.info/favicon.ico",
-        "darktable": "https://www.darktable.org/favicon.ico",
-        "DaxStudio": "https://daxstudio.org/favicon.ico",
-        "ddu": "https://www.wagnardsoft.com/favicon.ico",
-        "deluge": "https://deluge-torrent.org/favicon.ico",
-        "devtoys": "https://devtoys.app/favicon.ico",
-        "digikam": "https://www.digikam.org/favicon.ico",
-        "discord": "https://discord.com/assets/847541504914fd33810e70a0ea73177e.ico",
-        "dismtools": "https://github.com/Chuyu-Team/DISMTools/raw/master/DISMTools/Resources/DISMTools.ico",
-        "ditto": "https://ditto-cp.sourceforge.io/favicon.ico",
-        "dmt": "https://www.daemon-tools.cc/favicon.ico",
-        "dockerdesktop": "https://www.docker.com/favicon.ico",
-        "dotnet3": "https://dotnet.microsoft.com/favicon.ico",
-        "dotnet5": "https://dotnet.microsoft.com/favicon.ico",
-        "dotnet6": "https://dotnet.microsoft.com/favicon.ico",
-        "dotnet7": "https://dotnet.microsoft.com/favicon.ico",
-        "dotnet8": "https://dotnet.microsoft.com/favicon.ico",
-        "dotnet9": "https://dotnet.microsoft.com/favicon.ico",
-        "dropox": "https://www.dropbox.com/static/images/favicon.ico",
-        "duplicati": "https://www.duplicati.com/favicon.ico",
-        "eaapp": "https://www.ea.com/favicon.ico",
-        "EarTrumpet": "https://raw.githubusercontent.com/File-New-Project/EarTrumpet/main/Assets/EarTrumpet.png",
-        "edge": "https://www.microsoft.com/favicon.ico",
-        "efibooteditor": "https://github.com/dakanji/EfiBootEditor/raw/main/resources/icon.ico",
-        "emulationstation": "https://emulationstation.org/favicon.ico",
-        "epicgames": "https://www.epicgames.com/favicon.ico",
-        "EqualizerAPO": "https://sourceforge.net/p/equalizerapo/icon",
-        "esearch": "https://github.com/xupefei/EverythingToolbar/raw/master/src/EverythingToolbar/Resources/App.ico",
-        "espanso": "https://espanso.org/favicon.ico",
-        "ExifCleaner": "https://exifcleaner.com/favicon.ico",
-        "falkon": "https://www.falkon.org/favicon.ico",
-        "FanControl": "https://raw.githubusercontent.com/Rem0o/FanControl.Releases/master/FanControl/Resources/FanControl.ico",
-        "fastfetch": "https://raw.githubusercontent.com/fastfetch-cli/fastfetch/dev/presets/fastfetch.png",
-        "ferdium": "https://ferdium.org/favicon.ico",
-        "ffmpeg": "https://ffmpeg.org/favicon.ico",
-        "fileconverter": "https://file-converter.io/favicon.ico",
-        "files": "https://files.community/favicon.ico",
-        "firealpaca": "https://firealpaca.com/favicon.ico",
-        "firefox": "https://www.mozilla.org/media/img/favicons/firefox/browser/favicon.dde5f6d25496.ico",
-        "firefoxesr": "https://www.mozilla.org/media/img/favicons/firefox/browser/favicon.dde5f6d25496.ico",
-        "flameshot": "https://flameshot.org/favicon.ico",
-        "floorp": "https://floorp.app/favicon.ico",
-        "flow": "https://flowlauncher.com/favicon.ico",
-        "flux": "https://justgetflux.com/favicon.ico",
-        "fnm": "https://raw.githubusercontent.com/Schniz/fnm/master/logo.png",
-        "foobar": "https://www.foobar2000.org/favicon.ico",
-        "ForceAutoHDR": "https://github.com/emoose/ForceAutoHDR/raw/main/resources/icon.ico",
-        "Fork": "https://git-fork.com/favicon.ico",
-        "foxpdfeditor": "https://www.foxit.com/favicon.ico",
-        "foxpdfreader": "https://www.foxit.com/favicon.ico",
-        "freecad": "https://www.freecad.org/favicon.ico",
-        "fxsound": "https://www.fxsound.com/favicon.ico",
-        "fzf": "https://raw.githubusercontent.com/junegunn/fzf/master/README.md/favicon.png",
-        "geforcenow": "https://www.nvidia.com/favicon.ico",
-        "gimp": "https://www.gimp.org/favicon.ico",
-        "git": "https://git-scm.com/favicon.ico",
-        "gitbutler": "https://gitbutler.com/favicon.ico",
-        "gitextensions": "https://gitextensions.github.io/favicon.ico",
-        "githubcli": "https://github.githubassets.com/favicons/favicon.svg",
-        "githubdesktop": "https://desktop.github.com/favicon.ico",
-        "gitify": "https://www.gitify.io/favicon.ico",
-        "gitkrakenclient": "https://www.gitkraken.com/favicon.ico",
-        "glaryutilities": "https://www.glarysoft.com/favicon.ico",
-        "glazewm": "https://raw.githubusercontent.com/glzr-io/glazewm/main/assets/icon.ico",
-        "godotengine": "https://godotengine.org/favicon.ico",
-        "gog": "https://www.gog.com/favicon.ico",
-        "golang": "https://go.dev/favicon.ico",
-        "googledrive": "https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png",
-        "gpuz": "https://www.techpowerup.com/favicon.ico",
-        "greenshot": "https://getgreenshot.org/favicon.ico",
-        "gsudo": "https://raw.githubusercontent.com/gerardog/gsudo/master/logo/gsudo.ico",
-        "guilded": "https://www.guilded.gg/favicon.ico",
-        "handbrake": "https://handbrake.fr/favicon.ico",
-        "harmonoid": "https://harmonoid.com/favicon.ico",
-        "heidisql": "https://www.heidisql.com/favicon.ico",
-        "helix": "https://helix-editor.com/favicon.ico",
-        "heroiclauncher": "https://heroicgameslauncher.com/favicon.ico",
-        "hexchat": "https://hexchat.github.io/favicon.ico",
-        "hwinfo": "https://www.hwinfo.com/favicon.ico",
-        "hwmonitor": "https://www.cpuid.com/favicon.ico",
-        "imageglass": "https://imageglass.org/favicon.ico",
-        "imgburn": "https://www.imgburn.com/favicon.ico",
-        "inkscape": "https://inkscape.org/favicon.ico",
-        "intelpresentmon": "https://www.intel.com/favicon.ico",
-        "itch": "https://itch.io/favicon.ico",
-        "itunes": "https://www.apple.com/favicon.ico",
-        "jami": "https://jami.net/favicon.ico",
-        "java11": "https://www.java.com/favicon.ico",
-        "java17": "https://www.java.com/favicon.ico",
-        "java21": "https://www.java.com/favicon.ico",
-        "java8": "https://www.java.com/favicon.ico",
-        "jdownloader": "https://jdownloader.org/favicon.ico",
-        "jellyfinmediaplayer": "https://jellyfin.org/images/favicon.ico",
-        "jellyfinserver": "https://jellyfin.org/images/favicon.ico",
-        "jetbrains": "https://www.jetbrains.com/favicon.ico",
-        "joplin": "https://joplinapp.org/favicon.ico",
-        "JoyToKey": "https://joytokey.net/favicon.ico",
-        "jpegview": "https://sourceforge.net/p/jpegview/icon",
-        "kdeconnect": "https://kdeconnect.kde.org/favicon.ico",
-        "kdenlive": "https://kdenlive.org/favicon.ico",
-        "keepass": "https://keepass.info/favicon.ico",
-        "kicad": "https://www.kicad.org/favicon.ico",
-        "klite": "https://codecguide.com/favicon.ico",
-        "kodi": "https://kodi.tv/favicon.ico",
-        "krita": "https://krita.org/favicon.ico",
-        "lazygit": "https://github.com/jesseduffield/lazygit/raw/master/assets/logo.png",
-        "LenovoLegionToolkit": "https://raw.githubusercontent.com/BartoszCichecki/LenovoLegionToolkit/main/src/LenovoLegionToolkit.WinUI/Assets/Logo.ico",
-        "libreoffice": "https://www.libreoffice.org/favicon.ico",
-        "LibreWolf": "https://librewolf.net/favicon.ico",
-        "lightshot": "https://app.prntscr.com/favicon.ico",
-        "Link Shell Extension": "https://schinagl.priv.at/favicon.ico",
-        "linphone": "https://www.linphone.org/favicon.ico",
-        "livelywallpaper": "https://rocksdanister.github.io/lively/favicon.ico",
-        "localsend": "https://localsend.org/favicon.ico",
-        "lockhunter": "https://lockhunter.com/favicon.ico",
-        "Logseq": "https://raw.githubusercontent.com/logseq/logseq/master/resources/icons/icon.png",
-        "magicwormhole": "https://magic-wormhole.readthedocs.io/en/latest/_static/favicon.ico",
-        "malwarebytes": "https://www.malwarebytes.com/favicon.ico",
-        "masscode": "https://masscode.io/favicon.ico",
-        "matrix": "https://matrix.org/favicon.ico",
-        "meld": "https://meldmerge.org/favicon.ico",
-        "miniconda": "https://docs.conda.io/en/latest/_static/favicon.ico",
-        "ModernFlyouts": "https://raw.githubusercontent.com/ModernFlyouts-Community/ModernFlyouts/main/ModernFlyouts/Assets/StoreLogo.png",
-        "monitorian": "https://github.com/emoacht/Monitorian/raw/master/Monitorian/Images/AppIcon.ico",
-        "moonlight": "https://moonlight-stream.org/favicon.ico",
-        "Motrix": "https://motrix.app/favicon.ico",
-        "mp3tag": "https://www.mp3tag.de/favicon.ico",
-        "mpchc": "https://mpc-hc.org/favicon.ico",
-        "mremoteng": "https://mremoteng.org/favicon.ico",
-        "msedgeredirect": "https://github.com/rcmaehl/MSEdgeRedirect/raw/master/Resources/icon.ico",
-        "msiafterburner": "https://www.msi.com/favicon.ico",
-        "MuEditor": "https://codewith.mu/favicon.ico",
-        "mullvadbrowser": "https://mullvad.net/favicon.ico",
-        "Mullvad VPN": "https://raw.githubusercontent.com/mullvad/mullvadvpn-app/main/dist-assets/icon.ico",
-        "musescore": "https://musescore.org/favicon.ico",
-        "musicbee": "https://getmusicbee.com/favicon.ico",
-        "nanazip": "https://github.com/M2Team/NanaZip/raw/main/Assets/NanaZip.ico",
-        "naps2": "https://www.naps2.com/favicon.ico",
-        "nditools": "https://ndi.tv/favicon.ico",
-        "neofetchwin": "https://raw.githubusercontent.com/dylanaraps/neofetch/master/neofetch.png",
-        "neovim": "https://neovim.io/favicon.ico",
-        "netbird": "https://netbird.io/favicon.ico",
-        "nextclouddesktop": "https://nextcloud.com/favicon.ico",
-        "nglide": "https://www.zeus-software.com/img/favicon.ico",
-        "nilesoftShell": "https://nilesoft.org/favicon.ico",
-        "nmap": "https://nmap.org/favicon.ico",
-        "nodejs": "https://nodejs.org/static/images/favicons/favicon.ico",
-        "nodejslts": "https://nodejs.org/static/images/favicons/favicon.ico",
-        "nomacs": "https://nomacs.org/favicon.ico",
-        "notepadplus": "https://notepad-plus-plus.org/favicon.ico",
-        "nTrace": "https://www.zeus-software.com/downloads/ntrace/favicon.ico",
-        "nuget": "https://nuget.org/favicon.ico",
-        "nushell": "https://www.nushell.sh/favicon.ico",
-        "nvclean": "https://www.techpowerup.com/favicon.ico",
-        "nvm": "https://raw.githubusercontent.com/nvm-sh/nvm/master/logo.svg",
-        "obs": "https://obsproject.com/favicon.ico",
-        "obsidian": "https://obsidian.md/favicon.ico",
-        "OFGB": "https://github.com/Aetopia/OFGB/raw/main/icon.ico",
-        "Oh My Posh": "https://ohmyposh.dev/img/favicon.ico",
-        "okular": "https://okular.kde.org/favicon.ico",
-        "onedrive": "https://onedrive.live.com/favicon.ico",
-        "onlyoffice": "https://www.onlyoffice.com/favicon.ico",
-        "OPAutoClicker": "https://opautoclicker.com/favicon.ico",
-        "openhashtab": "https://github.com/namazso/OpenHashTab/raw/master/installer/OpenHashTab.ico",
-        "openrgb": "https://openrgb.org/favicon.ico",
-        "openscad": "https://openscad.org/favicon.ico",
-        "openshell": "https://open-shell.github.io/Open-Shell-Menu/favicon.ico",
-        "OpenVPN": "https://openvpn.net/favicon.ico",
-        "orcaslicer": "https://github.com/SoftFever/OrcaSlicer/raw/main/resources/icons/orca256.png",
-        "OVirtualBox": "https://www.virtualbox.org/favicon.ico",
-        "ownclouddesktop": "https://owncloud.com/favicon.ico",
-        "Paintdotnet": "https://www.getpaint.net/favicon.ico",
-        "PaleMoon": "https://www.palemoon.org/favicon.ico",
-        "parsec": "https://parsec.app/favicon.ico",
-        "pdf24creator": "https://tools.pdf24.org/favicon.ico",
-        "pdfgear": "https://www.pdfgear.com/favicon.ico",
-        "pdfsam": "https://pdfsam.org/favicon.ico",
-        "peazip": "https://peazip.github.io/peazip.ico",
-        "piimager": "https://www.raspberrypi.com/favicon.ico",
-        "pixi": "https://pixi.sh/favicon.ico",
-        "playnite": "https://playnite.link/favicon.ico",
-        "plex": "https://www.plex.tv/wp-content/themes/plex/assets/img/favicons/favicon-32x32.png",
-        "plexdesktop": "https://www.plex.tv/wp-content/themes/plex/assets/img/favicons/favicon-32x32.png",
-        "Portmaster": "https://safing.io/favicon.ico",
-        "posh": "https://ohmyposh.dev/img/favicon.ico",
-        "postman": "https://www.postman.com/favicon.ico",
-        "powerautomate": "https://powerautomate.microsoft.com/favicon.ico",
-        "powerbi": "https://powerbi.microsoft.com/favicon.ico",
-        "powershell": "https://learn.microsoft.com/favicon.ico",
-        "powertoys": "https://learn.microsoft.com/favicon.ico",
-        "prismlauncher": "https://prismlauncher.org/favicon.ico",
-        "processlasso": "https://bitsum.com/favicon.ico",
-        "processmonitor": "https://learn.microsoft.com/favicon.ico",
-        "prucaslicer": "https://github.com/prusa3d/PrusaSlicer/raw/master/resources/icons/256x256.png",
-        "PS Remote Play": "https://remoteplay.dl.playstation.net/remoteplay/favicon.ico",
-        "PulsarEdit": "https://pulsar-edit.dev/favicon.ico",
-        "PuTTY": "https://www.chiark.greenend.org.uk/~sgtatham/putty/putty.ico",
-        "pyenv": "https://raw.githubusercontent.com/pyenv-win/pyenv-win/master/pyenv-win.ico",
-        "python3": "https://www.python.org/static/favicon.ico",
-        "qbittorrent": "https://www.qbittorrent.org/favicon.ico",
-        "qgis": "https://qgis.org/favicon.ico",
-        "qtox": "https://qtox.github.io/favicon.ico",
-        "quicklook": "https://pooi.moe/QuickLook/favicon.ico",
-        "rainmeter": "https://www.rainmeter.net/favicon.ico",
-        "rdcman": "https://learn.microsoft.com/favicon.ico",
-        "revo": "https://www.revouninstaller.com/favicon.ico",
-        "Revolt": "https://revolt.chat/favicon.svg",
-        "ripgrep": "https://raw.githubusercontent.com/BurntSushi/ripgrep/master/rg.ico",
-        "rufus": "https://rufus.ie/favicon.ico",
-        "rustdesk": "https://rustdesk.com/favicon.ico",
-        "rustlang": "https://www.rust-lang.org/favicon.ico",
-        "sagethumbs": "https://sourceforge.net/p/sagethumbs/icon",
-        "sandboxie": "https://sandboxie-plus.com/favicon.ico",
-        "sdio": "https://www.snappy-driver-installer.org/favicon.ico",
-        "session": "https://getsession.org/favicon.ico",
-        "sharex": "https://getsharex.com/favicon.ico",
-        "Shotcut": "https://shotcut.org/favicon.ico",
-        "sidequest": "https://sidequestvr.com/favicon.ico",
-        "signal": "https://signal.org/favicon.ico",
-        "signalrgb": "https://signalrgb.com/favicon.ico",
-        "simplenote": "https://simplenote.com/favicon.ico",
-        "simplewall": "https://www.henrypp.org/favicon.ico",
-        "slack": "https://slack.com/favicon.ico",
-        "smplayer": "https://smplayer.info/favicon.ico",
-        "spacedrive": "https://spacedrive.com/favicon.ico",
-        "spacesniffer": "https://www.uderzo.it/main_products/space_sniffer/favicon.ico",
-        "spotify": "https://open.spotifycdn.com/cdn/images/favicon32.b64ecc03.png",
-        "sqlmanagementstudio": "https://learn.microsoft.com/favicon.ico",
-        "starship": "https://starship.rs/favicon.ico",
-        "steam": "https://store.steampowered.com/favicon.ico",
-        "strawberry": "https://www.strawberrymusicplayer.org/favicon.ico",
-        "stremio": "https://www.stremio.com/favicon.ico",
-        "sublimemerge": "https://www.sublimemerge.com/favicon.ico",
-        "sublimetext": "https://www.sublimetext.com/favicon.ico",
-        "SubtitleEdit": "https://www.nikse.dk/Files/Images/Logo/SubEdit.ico",
-        "sumatra": "https://www.sumatrapdfreader.org/favicon.ico",
-        "sunshine": "https://app.lizardbyte.dev/favicon.ico",
-        "superf4": "https://stefansundin.github.io/superf4/favicon.ico",
-        "swift": "https://www.swift.org/favicon.ico",
-        "syncthingtray": "https://github.com/Martchus/syncthingtray/raw/master/resources/icons/org.syncthing.sttray-256.png",
-        "synctrayzor": "https://synctrayzor.syncthing.net/favicon.ico",
-        "Tabby": "https://raw.githubusercontent.com/Eugeny/tabby/master/app/resources/linux-icons/128x128.png",
-        "tagscanner": "https://www.xdlab.ru/favicon.ico",
-        "tailscale": "https://tailscale.com/favicon.ico",
-        "TcNoAccSwitcher": "https://tcno.co/favicon.ico",
-        "tcpview": "https://learn.microsoft.com/favicon.ico",
-        "teams": "https://www.microsoft.com/favicon.ico",
-        "teamviewer": "https://www.teamviewer.com/favicon.ico",
-        "telegram": "https://web.telegram.org/favicon.ico",
-        "temurin": "https://adoptium.net/favicon.ico",
-        "TeraCopy": "https://www.codesector.com/favicon.ico",
-        "terminal": "https://raw.githubusercontent.com/microsoft/terminal/main/res/terminal.ico",
-        "Thonny": "https://thonny.org/favicon.ico",
-        "thorium": "https://thorium.rocks/favicon.ico",
-        "thunderbird": "https://www.thunderbird.net/media/img/thunderbird/favicon.ico",
-        "tidal": "https://tidal.com/favicon.ico",
-        "tightvnc": "https://www.tightvnc.com/favicon.ico",
-        "tixati": "https://www.tixati.com/favicon.ico",
-        "tor": "https://www.torproject.org/favicon.ico",
-        "totalcommander": "https://www.ghisler.com/favicon.ico",
-        "transmission": "https://transmissionbt.com/favicon.ico",
-        "treesize": "https://www.jam-software.com/favicon.ico",
-        "ttaskbar": "https://t-tweak.com/favicon.ico",
-        "twinkletray": "https://twinkletray.com/favicon.ico",
-        "ubisoft": "https://www.ubisoft.com/favicon.ico",
-        "Ueli": "https://raw.githubusercontent.com/oliverschwendener/ueli/master/assets/icon/icon.png",
-        "ultravnc": "https://www.uvnc.com/favicon.ico",
-        "Ungoogled Chromium": "https://raw.githubusercontent.com/ungoogled-software/ungoogled-chromium/master/app/resources/product_logo_256.png",
-        "Unigram": "https://raw.githubusercontent.com/UnigramDev/Unigram/develop/Unigram/Assets/Square44x44Logo.altform-unplated_targetsize-256.png",
-        "unity": "https://unity.com/favicon.ico",
-        "vagrant": "https://www.vagrantup.com/favicon.ico",
-        "vc2015_32": "https://learn.microsoft.com/favicon.ico",
-        "vc2015_64": "https://learn.microsoft.com/favicon.ico",
-        "ventoy": "https://www.ventoy.net/favicon.ico",
-        "vesktop": "https://github.com/Vencord/Vesktop/raw/main/assets/icon.png",
-        "viber": "https://www.viber.com/favicon.ico",
-        "videomass": "https://videomass.github.io/favicon.ico",
-        "Virtual Desktop Streamer": "https://www.vrdesktop.net/favicon.ico",
-        "Virtual Volumes View": "https://www.xdlab.ru/favicon.ico",
-        "vistaswitcher": "https://www.ntwind.com/favicon.ico",
-        "visualstudio": "https://visualstudio.microsoft.com/favicon.ico",
-        "vivaldi": "https://vivaldi.com/favicon.ico",
-        "VLC": "https://www.videolan.org/favicon.ico",
-        "voicemeeter": "https://vb-audio.com/VoicemeeterBanana/favicon.ico",
-        "VoicemeeterPotato": "https://vb-audio.com/VoicemeeterPotato/favicon.ico",
-        "vscode": "https://code.visualstudio.com/favicon.ico",
-        "VSCodium": "https://vscodium.com/favicon.ico",
-        "waterfox": "https://www.waterfox.net/favicon.ico",
-        "wazuh": "https://wazuh.com/favicon.ico",
-        "wezterm": "https://wezfurlong.org/wezterm/favicon.ico",
-        "Windhawk": "https://ramensoftware.com/favicon.ico",
-        "WindowGrid": "https://windowgrid.net/favicon.ico",
-        "windowsfirewallcontrol": "https://www.binisoft.org/favicon.ico",
-        "windowspchealth": "https://learn.microsoft.com/favicon.ico",
-        "wingetui": "https://github.com/marticliment/WingetUI/raw/main/logo.ico",
-        "winmerge": "https://winmerge.org/favicon.ico",
-        "winpaletter": "https://github.com/Abdelrhman-AK/WinPaletter/raw/main/WinPaletter/Resources/Icons/WinPaletter.ico",
-        "winrar": "https://www.win-rar.com/favicon.ico",
-        "WinSCP": "https://winscp.net/favicon.ico",
-        "wireguard": "https://www.wireguard.com/favicon.ico",
-        "wireshark": "https://www.wireshark.org/favicon.ico",
-        "WiseProgramUninstaller": "https://www.wisecleaner.com/favicon.ico",
-        "wisetoys": "https://toys.wisetoys.cn/favicon.ico",
-        "wizfile": "https://wizfile.net/favicon.ico",
-        "wiztree": "https://wiztreefree.com/favicon.ico",
-        "xdm": "https://xtremedownloadmanager.com/images/xdm_logo.png",
-        "xeheditor": "https://xehub.io/favicon.ico",
-        "xemu": "https://xemu.app/favicon.ico",
-        "xnview": "https://www.xnview.com/favicon.ico",
-        "xournal": "https://xournal.sourceforge.net/favicon.ico",
-        "xpipe": "https://xpipe.io/favicon.ico",
-        "Xtreme Download Manager": "https://xtremedownloadmanager.com/images/xdm_logo.png",
-        "Yarn": "https://yarnpkg.com/img/yarn-favicon.svg",
-        "ytdlp": "https://github.com/yt-dlp/yt-dlp/raw/master/devscripts/logo.png",
-        "ZenBrowser": "https://zen-browser.app/favicon.ico",
-        "zerotierone": "https://www.zerotier.com/favicon.ico",
-        "Zim": "https://raw.githubusercontent.com/zim-desktop-wiki/zim-desktop-wiki/master/data/icons/48x48/zim.png",
-        "znote": "https://znote.io/favicon.ico",
-        "zoom": "https://zoom.us/favicon.ico",
-        "zoomit": "https://learn.microsoft.com/favicon.ico",
-        "zotero": "https://www.zotero.org/favicon.ico",
-        "zoxide": "https://github.com/ajeetdsouza/zoxide/raw/main/assets/logo.png",
-        "Zulip": "https://raw.githubusercontent.com/zulip/zulip-desktop/main/build/icon.ico"
+    const SCRIPT_VERSION = '5.3.0';
+    const GH_REPO_RAW = 'https://raw.githubusercontent.com/SysAdminDoc/NoNinite/main';
+    const DATA_URL_PRIMARY = `https://raw.githubusercontent.com/SysAdminDoc/NoNinite/refs/heads/main/data/ChocolateyPackageExporter/chocoapplications.json`;
+    const DATA_URL_FALLBACK = `https://raw.githubusercontent.com/SysAdminDoc/NoNinite/main/data/ChocolateyPackageExporter/chocoapplications.json`;
+    const GENERIC_ICON_URL = `${GH_REPO_RAW}/assets/icons/favicon.ico`;
+    const CACHE_DURATION_MS = 12 * 60 * 60 * 1000; // 12 hours
+    const ALL_APPS_BATCH_SIZE = 50;
+    const CATEGORY_COLUMN_INITIAL_COUNT = 8;
+    const CATEGORY_COLUMN_BATCH_SIZE = 10;
+    const SEARCH_DEBOUNCE_MS = 220;
+
+    const CANONICAL_CATEGORIES = [
+        "Browsers & Internet", "Communication & Collaboration", "Productivity & Office", "Media & Design",
+        "Development", "Utilities & Tools", "Security & Privacy", "Networking & Remote", "Gaming & Game Tools",
+        "Virtualization & Emulation", "Data & Analytics", "Education & Reference", "Science & Engineering",
+        "Business & Finance", "System & OS", "Cloud & DevOps"
+    ];
+
+    const PINNED_CATEGORIES = ["Browsers & Internet", "Productivity & Office", "Utilities & Tools"];
+
+    const CANONICAL_CATEGORY_MAP = {
+        'web browsers': "Browsers & Internet", 'internet': "Browsers & Internet", 'browsers': "Browsers & Internet", 'browser extensions': "Browsers & Internet",
+        'messaging': "Communication & Collaboration", 'chat': "Communication & Collaboration", 'communication': "Communication & Collaboration", 'social and communication': "Communication & Collaboration", 'communication and collaboration': "Communication & Collaboration", 'communication and messaging': "Communication & Collaboration", 'communication and social': "Communication & Collaboration", 'communication tools': "Communication & Collaboration", 'social media': "Communication & Collaboration",
+        'documents': "Productivity & Office", 'office': "Productivity & Office", 'productivity': "Productivity & Office", 'office and productivity': "Productivity & Office", 'document management': "Productivity & Office", 'document tools': "Productivity & Office", 'productivity tools': "Productivity & Office",
+        'media': "Media & Design", 'imaging': "Media & Design", 'graphics': "Media & Design", 'design': "Media & Design", 'music and video': "Media & Design", 'creative tools': "Media & Design", 'creativity': "Media & Design", 'design and graphics': "Media & Design", 'design and media': "Media & Design", 'design and photography': "Media & Design", 'design and publishing': "Media & Design", 'design assets': "Media & Design", 'design tools': "Media & Design", 'entertainment': "Media & Design", 'graphic design': "Media & Design", 'graphics and design': "Media & Design", 'media and design': "Media & Design", 'media tools': "Media & Design", 'multimedia': "Media & Design", 'fonts': "Media & Design",
+        'developer': "Development", 'development tools': "Development", 'dev': "Development",
+        'utilities': "Utilities & Tools", 'tools': "Utilities & Tools", 'other': "Utilities & Tools", 'compression': "Utilities & Tools", 'accessibility': "Utilities & Tools", 'customization': "Utilities & Tools", 'general utilities': "Utilities & Tools", 'hardware utilities': "Utilities & Tools", 'hobbies and interests': "Utilities & Tools", 'hobbies and leisure': "Utilities & Tools", 'home automation': "Utilities & Tools", 'information and news': "Utilities & Tools", 'lifestyle': "Utilities & Tools", 'smart home': "Utilities & Tools", 'specialized tools': "Utilities & Tools", 'sports and fitness': "Utilities & Tools", 'sports and recreation': "Utilities & Tools", 'system utilities': "Utilities & Tools", 'travel and navigation': "Utilities & Tools", 'error': 'Utilities & Tools',
+        'security': "Security & Privacy", 'security and privacy': "Security & Privacy", 'security tools': "Security & Privacy",
+        'file sharing': "Networking & Remote", 'networking': "Networking & Remote", 'internet and network': "Networking & Remote", 'internet tools': "Networking & Remote", 'internet utilities': "Networking & Remote", 'network tools': "Networking & Remote", 'network utilities': "Networking & Remote", 'networking tools': "Networking & Remote",
+        'gaming': "Gaming & Game Tools", 'games': "Gaming & Game Tools", 'gaming tools': "Gaming & Game Tools", 'gaming utilities': "Gaming & Game Tools",
+        'virtualization and emulation': "Virtualization & Emulation",
+        'data and analytics': "Data & Analytics",
+        'education': "Education & Reference", 'education and reference': "Education & Reference", 'education and science': "Education & Reference", 'education software': "Education & Reference",
+        'science and education': "Science & Engineering", 'science and engineering': "Science & Engineering", 'engineering software': "Science & Engineering", 'industrial and engineering': "Science & Engineering", 'science and gis': "Science & Engineering", 'science and research': "Science & Engineering", 'scientific': "Science & Engineering", 'scientific software': "Science & Engineering", 'scientific tools': "Science & Engineering",
+        'business': "Business & Finance", 'business and finance': "Business & Finance", 'business and productivity': "Business & Finance", 'business software': "Business & Finance", 'business tools': "Business & Finance", 'cryptocurrency tools': "Business & Finance", 'finance': "Business & Finance", 'finance and blockchain tools': "Business & Finance",
+        'runtimes': "System & OS", 'it and management': "System & OS", 'it and remote management': "System & OS", 'it management': "System & OS", 'it tools': "System & OS", 'system administration': "System & OS", 'system and customization': "System & OS", 'system monitoring': "System & OS", 'system tool': "System & OS", 'system tools': "System & OS",
+        'online storage': "Cloud & DevOps", 'cloud services': "Cloud & DevOps", 'cloud tools': "Cloud & DevOps",
+    };
+
+    const KEYWORD_CATEGORY_MAP = [
+        { keywords: ['browser', 'web'], category: "Browsers & Internet" },
+        { keywords: ['chat', 'collaboration', 'voip', 'remote desktop', 'rdp', 'vnc', 'messaging'], category: "Communication & Collaboration" },
+        { keywords: ['office', 'word processor', 'spreadsheet', 'presentation', 'notes', 'email', 'pdf', 'document'], category: "Productivity & Office" },
+        { keywords: ['video', 'audio', 'music', 'image', 'photo', 'editor', 'player', 'design', 'cad', '3d', 'font'], category: "Media & Design" },
+        { keywords: ['ide', 'code', 'git', 'database', 'devops', 'terminal', 'api', 'compiler', 'sdk'], category: "Development" },
+        { keywords: ['uninstaller', 'backup', 'recovery', 'launcher', 'cleaner', 'registry', 'archive', 'zip'], category: "Utilities & Tools" },
+        { keywords: ['antivirus', 'password', 'encryption', 'vpn', 'privacy', 'firewall', 'malware'], category: "Security & Privacy" },
+        { keywords: ['ftp', 'ssh', 'sftp', 'torrent', 'p2p', 'network'], category: "Networking & Remote" },
+        { keywords: ['gaming', 'game'], category: "Gaming & Game Tools" },
+        { keywords: ['virtualization', 'emulator', 'vm', 'container', 'docker'], category: "Virtualization & Emulation" },
+        { keywords: ['data', 'analytics', 'bi', 'statistics'], category: "Data & Analytics" },
+        { keywords: ['education', 'reference', 'learning'], category: "Education & Reference" },
+        { keywords: ['science', 'engineering', 'math', 'gis'], category: "Science & Engineering" },
+        { keywords: ['finance', 'business', 'crypto', 'accounting'], category: "Business & Finance" },
+        { keywords: ['runtime', 'framework', 'driver', 'system', 'wsl'], category: "System & OS" },
+        { keywords: ['cloud', 'storage', 'dropbox', 'gdrive'], category: "Cloud & DevOps" },
+    ];
+
+    const SEARCH_ALIASES = {
+        'vscode': 'visual studio code', 'vs code': 'visual studio code', '7zip': '7-zip', 'pwsh': 'powershell', 'winrar': 'winrar',
+        'ps': 'powershell', 'node': 'nodejs'
+    };
+
+    const INTENT_CHIPS = {
+        'pdf': [
+            { label: 'PDF Reader', filters: { tags: ['Pdf', 'Viewer'] } },
+            { label: 'PDF Editor', filters: { tags: ['Pdf', 'Editor'] } },
+            { label: 'PDF Printer', filters: { tags: ['Pdf', 'Printer'] } },
+        ]
     };
 
     const defaultPresets = [
-        { name: "Fresh Windows Install", notes: "General user workstation", items: ["Chrome", "7-Zip", "VLC", "Spotify", "PowerShell 7", "Microsoft PowerToys", "Windows Terminal"] },
-        { name: "Helpdesk Tools", notes: "Remote support and triage", items: ["AnyDesk", "TeamViewer", "7-Zip", "Everything", "Revo Uninstaller", "WizTree"] },
-        { name: "Developer Workstation", notes: "Common dev stack", items: ["VS Code", "Git", "Node.js", "Python 3", "Windows Terminal", "Docker Desktop", "Notepad++", "WinSCP", "PuTTY"] },
-        { name: "Remote Support Lite", notes: "Bare essentials", items: ["AnyDesk", "7-Zip", "Everything"] },
-        { name: "Media/Streaming", notes: "Creators and streamers", items: ["VLC", "Audacity", "HandBrake", "ShareX"] },
-        { name: "Privacy/Security", notes: "Hardening basics", items: ["Bitwarden", "KeePassXC", "VeraCrypt", "Firefox"] },
-        { name: "IT Admin Work-from-a-USB", notes: "Portable-leaning toolbox for field work", items: ["7-Zip", "Everything", "Notepad++", "PuTTY", "WinSCP", "WizTree", "TreeSize Free", "ShareX", "Greenshot", "Firefox"] }
+        { name: "Fresh Windows Install", icon: "💻", items: ["Google Chrome", "7-Zip", "VLC", "Spotify", "PowerShell", "PowerToys", "Microsoft Edge", "Everything"] },
+        { name: "Helpdesk Tools", icon: "🛠️", items: ["AnyDesk", "TeamViewer", "7-Zip", "Everything", "Revo Uninstaller", "WizTree", "PuTTY", "WinSCP"] },
+        { name: "Developer Workstation", icon: "🚀", items: ["Visual Studio Code", "Git", "NodeJS", "Python 3", "Windows Terminal", "Docker Desktop", "Notepad++", "Postman"] },
+        { name: "Media & Streaming", icon: "🎬", items: ["VLC", "Audacity", "HandBrake", "ShareX", "OBS Studio", "K-Lite Codec Pack Full"] },
+        { name: "Security Toolkit", icon: "🛡️", items: ["Bitwarden", "KeePassXC", "VeraCrypt", "Mozilla Firefox", "Wireshark", "Nmap"] },
     ];
 
-    const defaultStacks = ["browsers", "dev", "remote", "media", "portable", "security"];
-    const defaultAppTags = {
-        "Chrome": ["browsers"], "Firefox": ["browsers", "security"], "Edge": ["browsers"], "Brave": ["browsers", "security"], "Opera": ["browsers"], "Vivaldi": ["browsers"],
-        "VS Code": ["dev"], "Git": ["dev"], "Node.js": ["dev"], "Python 3": ["dev"], "Windows Terminal": ["dev"], "Docker Desktop": ["dev"], "Notepad++": ["dev", "portable"],
-        "PuTTY": ["dev", "remote", "portable"], "WinSCP": ["dev", "remote", "portable"], "FileZilla": ["dev", "remote"],
-        "AnyDesk": ["remote"], "TeamViewer": ["remote"], "VNC Viewer": ["remote"],
-        "VLC": ["media"], "Audacity": ["media"], "HandBrake": ["media"], "ShareX": ["media", "portable"], "Greenshot": ["media", "portable"],
-        "7-Zip": ["portable"], "Everything": ["portable"], "WizTree": ["portable"], "TreeSize Free": ["portable"],
-        "Bitwarden": ["security"], "KeePassXC": ["security"], "VeraCrypt": ["security"]
+    const FACET_KEYWORDS = [
+        'pdf', 'ssh', 'vpn', 'sftp', 'rdp', 'open source', 'oss', 'portable',
+        'x86', 'x64', '32-bit', '64-bit', 'gis', 'forensics', 'blockchain', 'crypto', 'cad',
+        'emulator', 'streaming', 'backup', 'uninstaller', 'torrent'
+    ];
+
+    // Polyfill for requestIdleCallback
+    const idleCallback = window.requestIdleCallback || function (handler) { return setTimeout(() => handler({ didTimeout: false, timeRemaining: () => 50 }), 1); };
+    const cancelIdleCallback = window.cancelIdleCallback || function (id) { clearTimeout(id); };
+
+    // -----------------------------------------------------------------------------
+    //  STATE MANAGEMENT
+    // -----------------------------------------------------------------------------
+
+    const state = {
+        allApps: [],
+        filteredApps: [],
+        topTags: [],
+        theme: 'dark',
+        viewMode: 'category', // category, all-apps, tasks
+        density: 'comfy',    // comfy, compact
+        selection: {}, // { "AppName": "winget" | "choco" }
+        isSelectionDrawerOpen: false,
+        isHelpOpen: false,
+        filters: {
+            search: '',
+            installer: 'any', // any, winget, choco
+            license: [],      // Open Source, Freeware, Commercial
+            arch: [],         // x86, x64
+            installType: [],  // Portable
+            popularity: 'all',// all, very-popular
+            tags: []
+        },
+        scriptOptions: {
+            type: 'powershell', // powershell, cmd
+            verbose: false,
+            scope: 'machine', // machine, user
+            nonInteractive: true,
+            acceptEulas: true,
+            continueOnError: false
+        },
+        options: {
+            sortBy: 'smart', // smart, name, downloads, updated
+        },
+        presets: [],
+        __caps: { winget: true, choco: true }, // Dataset capabilities, default to true
     };
 
-    // ---------- Persistent State ----------
-    const state = loadState();
-
     function loadState() {
+        // Invalidate stale settings if the script version changes significantly
+        const lastVersion = GM_getValue('scriptVersion');
+        if (lastVersion !== SCRIPT_VERSION) {
+            GM_setValue('filters', {}); // Reset filters which are schema-dependent
+            GM_setValue('options', {});
+            GM_setValue('scriptVersion', SCRIPT_VERSION);
+            console.log(`NoNinite: Upgraded from ${lastVersion} to ${SCRIPT_VERSION}. Resetting filters.`);
+        }
+
         const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        const storedTheme = GM_getValue('theme');
-        const defaultTheme = storedTheme === undefined ? 'dark' : storedTheme;
+        state.theme = GM_getValue('theme', systemTheme);
+        state.density = GM_getValue('density', 'comfy');
+        state.filters = { ...state.filters, ...GM_getValue('filters', {}) };
+        state.options = { ...state.options, ...GM_getValue('options', {}) };
+        state.scriptOptions = { ...state.scriptOptions, ...GM_getValue('scriptOptions', {}) };
+        state.presets = GM_getValue('presets', structuredClone(defaultPresets));
+        state.selection = GM_getValue('selection', {});
+    }
 
-        const storedAppData = GM_getValue('appData');
-        const appData = storedAppData && Object.keys(storedAppData).length > 0 ? storedAppData : structuredClone(defaultAppData);
+    function saveState(key) {
+        const stateToSave = {
+            theme: state.theme,
+            density: state.density,
+            filters: state.filters,
+            options: state.options,
+            scriptOptions: state.scriptOptions,
+            selection: state.selection,
+            presets: state.presets
+        };
+        if (key && stateToSave.hasOwnProperty(key)) {
+            GM_setValue(key, stateToSave[key]);
+        } else {
+            for (const [k, v] of Object.entries(stateToSave)) GM_setValue(k, v);
+        }
+    }
 
-        return {
-            theme: GM_getValue('theme', defaultTheme),
-            hiddenCategories: GM_getValue('hiddenCategories', {}),
-            collapsedCategories: GM_getValue('collapsedCategories', {}),
-            versions: GM_getValue('versions', {}),
-            options: GM_getValue('options', {
-                wingetScope: 'machine',
-                wingetSilent: true,
-                wingetDisableInteractivity: true,
-                wingetAccept: true,
-                chocoY: true,
-                chocoNoProgress: true,
-                bootstrap: true,
-                enableWinget: true,
-                enableChoco: true,
-                enableStacks: false
-            }),
-            presets: GM_getValue('presets', structuredClone(defaultPresets)),
-            appData,
-            appTags: GM_getValue('appTags', structuredClone(defaultAppTags)),
-            stacks: GM_getValue('stacks', structuredClone(defaultStacks)),
-            editMode: GM_getValue('editMode', false)
+    // -----------------------------------------------------------------------------
+    //  UI - STYLES
+    // -----------------------------------------------------------------------------
+
+    function injectStyles() {
+        GM_addStyle(`
+:root {
+    --nn-font-sans: Segoe UI, Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --nn-font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monaco, monospace;
+    --nn-z-modal: 10000;
+    --nn-z-drawer: 9990;
+    --nn-z-header: 9980;
+    --nn-z-selection-bar: 9970;
+    --nn-z-toast: 10010;
+    --nn-header-height: 60px;
+    --nn-nav-height: 50px;
+    --nn-toolbar-height: 50px;
+    --nn-selection-bar-height: 55px;
+    --nn-filter-rail-width: 260px;
+    --nn-drawer-width: 550px;
+    --nn-ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --nn-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Themes */
+:root, [data-theme="dark"] {
+    --nn-bg-base: #121212;
+    --nn-bg-surface: #1e1e1e;
+    --nn-bg-surface-2: #2a2a2a;
+    --nn-bg-surface-3: #333333;
+    --nn-bg-surface-hover: #3c3c3c;
+    --nn-bg-surface-active: #4a4a4a;
+    --nn-text-primary: #e0e0e0;
+    --nn-text-secondary: #a0a0a0;
+    --nn-text-tertiary: #757575;
+    --nn-text-link: #64b5f6;
+    --nn-text-danger: #f47174;
+    --nn-text-success: #81c784;
+    --nn-text-warning: #ffd54f;
+    --nn-border-color: #424242;
+    --nn-border-color-strong: #616161;
+    --nn-accent-primary: #2979ff;
+    --nn-accent-primary-text: #ffffff;
+    --nn-accent-secondary: #323232;
+    --nn-scrollbar-thumb: #555;
+    --nn-scrollbar-track: var(--nn-bg-surface);
+    --nn-shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+    --nn-shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+    --nn-shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
+}
+[data-theme="light"] {
+    --nn-bg-base: #f5f5f5;
+    --nn-bg-surface: #ffffff;
+    --nn-bg-surface-2: #f0f0f0;
+    --nn-bg-surface-3: #e0e0e0;
+    --nn-bg-surface-hover: #eeeeee;
+    --nn-bg-surface-active: #e0e0e0;
+    --nn-text-primary: #212121;
+    --nn-text-secondary: #616161;
+    --nn-text-tertiary: #9e9e9e;
+    --nn-text-link: #1976d2;
+    --nn-border-color: #e0e0e0;
+    --nn-border-color-strong: #bdbdbd;
+    --nn-accent-primary: #1e88e5;
+    --nn-accent-secondary: #e3f2fd;
+    --nn-scrollbar-thumb: #bdbdbd;
+    --nn-scrollbar-track: var(--nn-bg-surface-2);
+    --nn-shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+    --nn-shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+    --nn-shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+}
+/* Reset & Base */
+#noninite-root *, #noninite-root *::before, #noninite-root *::after { box-sizing: border-box; }
+#noninite-root {
+    font-family: var(--nn-font-sans);
+    background-color: var(--nn-bg-base);
+    color: var(--nn-text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    height: 100vh;
+    width: 100vw;
+    position: fixed;
+    top: 0; left: 0;
+    display: grid;
+    grid-template-rows: var(--nn-header-height) auto 1fr;
+    grid-template-columns: var(--nn-filter-rail-width) 1fr;
+    grid-template-areas:
+        "header header"
+        "rail   nav"
+        "rail   main";
+    transition: background-color 0.3s var(--nn-ease-out), color 0.3s var(--nn-ease-out);
+}
+#noninite-root a { color: var(--nn-text-link); text-decoration: none; }
+#noninite-root button {
+    font-family: inherit; color: inherit; background: none; border: none;
+    cursor: pointer; padding: 0;
+}
+#noninite-root button:disabled { cursor: not-allowed; opacity: 0.5; }
+#noninite-root ::-webkit-scrollbar { width: 10px; height: 10px; }
+#noninite-root ::-webkit-scrollbar-track { background: var(--nn-scrollbar-track); }
+#noninite-root ::-webkit-scrollbar-thumb { background: var(--nn-scrollbar-thumb); border-radius: 5px; }
+#noninite-root ::-webkit-scrollbar-thumb:hover { background: #777; }
+/* Focus Ring */
+#noninite-root :focus-visible {
+    outline: 2px solid var(--nn-accent-primary) !important;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--nn-accent-primary) 30%, transparent) !important;
+    border-radius: 4px;
+}
+/* Layout components */
+.nn-header {
+    grid-area: header; z-index: var(--nn-z-header); display: flex; align-items: center;
+    padding: 0 24px; background-color: var(--nn-bg-surface);
+    border-bottom: 1px solid var(--nn-border-color); box-shadow: var(--nn-shadow-sm);
+}
+.nn-filter-rail {
+    grid-area: rail; z-index: var(--nn-z-header); display: flex; flex-direction: column;
+    background-color: var(--nn-bg-surface); border-right: 1px solid var(--nn-border-color);
+    overflow-y: auto; padding: 16px; gap: 24px;
+}
+.nn-main-nav { grid-area: nav; display: flex; align-items: center; padding: 8px 24px;
+    border-bottom: 1px solid var(--nn-border-color);
+}
+.nn-main-content {
+    grid-area: main; position: relative; display: flex; flex-direction: column;
+    overflow: hidden;
+}
+.nn-content-toolbar { display: flex; align-items: center; justify-content: flex-end; padding: 0 24px;
+    height: var(--nn-toolbar-height); min-height: var(--nn-toolbar-height);
+    border-bottom: 1px solid var(--nn-border-color); gap: 16px;
+}
+.nn-results-area {
+    flex-grow: 1; overflow-y: auto; padding: 24px;
+}
+/* Header */
+.nn-header__logo { display: flex; align-items: center; gap: 12px; font-size: 1.25rem; font-weight: 600; }
+.nn-header__logo img { height: 28px; }
+.nn-header__search-container { flex-grow: 1; margin: 0 40px; }
+.nn-search-wrapper { position: relative; }
+.nn-search-wrapper .nn-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--nn-text-tertiary); }
+.nn-search-input {
+    width: 100%; height: 40px; padding: 0 16px 0 45px; font-size: 1rem;
+    background-color: var(--nn-bg-base); color: var(--nn-text-primary);
+    border: 1px solid var(--nn-border-color); border-radius: 8px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.nn-search-input:focus { border-color: var(--nn-accent-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--nn-accent-primary) 20%, transparent); }
+.nn-header__actions { display: flex; align-items: center; gap: 8px; }
+.nn-icon-btn { display: inline-flex; justify-content: center; align-items: center; width: 36px; height: 36px;
+    border-radius: 50%; color: var(--nn-text-secondary);
+    transition: background-color 0.2s, color 0.2s; }
+.nn-icon-btn:hover { background-color: var(--nn-bg-surface-hover); color: var(--nn-text-primary); }
+/* Filter Rail */
+.nn-filter-group__title { font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--nn-text-secondary); margin: 0 0 12px; }
+.nn-filter-options { display: flex; flex-direction: column; gap: 8px; }
+.nn-filter-options--row { flex-direction: row; flex-wrap: wrap; }
+.nn-checkbox-label, .nn-radio-label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.nn-checkbox-label input, .nn-radio-label input { accent-color: var(--nn-accent-primary); }
+.nn-tag-chip {
+    padding: 4px 10px; border-radius: 16px; font-size: 0.85rem;
+    background-color: var(--nn-bg-surface-2); border: 1px solid var(--nn-border-color);
+    color: var(--nn-text-secondary); transition: all 0.2s; cursor: pointer;
+}
+.nn-tag-chip:hover { background-color: var(--nn-bg-surface-hover); border-color: var(--nn-border-color-strong); color: var(--nn-text-primary); }
+.nn-tag-chip.nn-active { background-color: var(--nn-accent-secondary); border-color: var(--nn-accent-primary); color: var(--nn-accent-primary); font-weight: 500; }
+[data-theme="dark"] .nn-tag-chip.nn-active { color: var(--nn-text-link); }
+.nn-intent-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+/* Main Nav & Toolbar */
+.nn-main-nav__tabs { display: flex; gap: 8px; }
+.nn-tab-btn {
+    padding: 10px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--nn-border-color);
+    background: var(--nn-bg-surface);
+    color: var(--nn-text-secondary);
+    transition: all .15s ease;
+    font-weight: 500;
+    position: relative;
+}
+.nn-tab-btn:hover { background: var(--nn-bg-surface-hover); color: var(--nn-text-primary); }
+.nn-tab-btn.nn-active {
+    color: var(--nn-accent-primary-text);
+    background: linear-gradient(180deg, var(--nn-accent-primary) 0%, #1a5cff 100%);
+    border-color: var(--nn-accent-primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+.nn-tab-btn.nn-active::after { display: none; }
+.nn-select-control {
+    padding: 6px 12px; border-radius: 6px; background-color: var(--nn-bg-surface-2);
+    border: 1px solid var(--nn-border-color);
+}
+/* Results Area - Category View */
+.nn-pinned-categories-container, .nn-other-categories-container {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px;
+}
+.nn-other-categories-container { margin-top: 24px; }
+.nn-category-column {
+    display: flex; flex-direction: column; background-color: var(--nn-bg-surface);
+    border: 1px solid var(--nn-border-color); border-radius: 8px;
+    height: 420px; overflow: hidden;
+}
+.nn-category-column__title {
+    font-size: 1.1rem; font-weight: 600; padding: 6px 12px;
+    border-bottom: 1px solid var(--nn-border-color);
+    flex-shrink: 0;
+}
+.nn-app-list { list-style: none; margin: 0; padding: 8px; flex-grow: 1; overflow-y: auto; }
+/* App List Item (Category View) */
+.nn-app-list-item {
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center;
+    gap: 12px; padding: 8px; border-radius: 6px; cursor: pointer;
+    transition: background-color 0.2s;
+    outline: 2px solid transparent;
+    outline-offset: 0;
+}
+.nn-app-list-item:hover { background-color: var(--nn-bg-surface-hover); }
+.nn-app-list-item.nn-selected {
+    background-color: color-mix(in srgb, var(--nn-accent-primary) 15%, transparent);
+    outline: 2px solid color-mix(in srgb, var(--nn-accent-primary) 40%, transparent);
+}
+.nn-app-list-item:focus-within { background-color: var(--nn-bg-surface-hover); }
+.nn-app-list-item__icon { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; }
+.nn-app-list-item__info { overflow: hidden; }
+.nn-app-list-item__name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nn-app-list-item__desc { font-size: 0.85rem; color: var(--nn-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nn-app-list-item__actions { display: flex; }
+.nn-installer-toggle {
+    font-weight: 700; font-size: 0.75rem; width: 24px; height: 24px;
+    border-radius: 4px; border: 1px solid var(--nn-border-color-strong);
+    background-color: var(--nn-bg-surface-3); color: var(--nn-text-secondary);
+    transition: all 0.2s;
+}
+.nn-installer-toggle:first-of-type { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.nn-installer-toggle:last-of-type { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: none; }
+.nn-installer-toggle:hover:not(:disabled) { background-color: var(--nn-bg-surface-hover); color: var(--nn-text-primary); }
+.nn-installer-toggle.nn-selected {
+    background: linear-gradient(180deg, var(--nn-accent-primary) 0%, #1a5cff 100%);
+    color: var(--nn-accent-primary-text);
+    border-color: var(--nn-accent-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--nn-accent-primary) 35%, transparent);
+    transform: translateY(-1px);
+}
+/* Results Area - All Apps View */
+.nn-all-apps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.nn-app-card {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    padding: 16px; background-color: var(--nn-bg-surface); border-radius: 8px;
+    border: 1px solid var(--nn-border-color); cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, outline 0.2s;
+    outline: 2px solid transparent;
+    outline-offset: 0;
+}
+.nn-app-card:hover { transform: translateY(-3px); box-shadow: var(--nn-shadow-md); }
+.nn-app-card.nn-selected {
+    border-color: var(--nn-accent-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--nn-accent-primary) 50%, transparent);
+    outline: 2px solid color-mix(in srgb, var(--nn-accent-primary) 40%, transparent);
+}
+.nn-app-card__icon { width: 48px; height: 48px; margin-bottom: 12px; }
+.nn-app-card__name { font-weight: 600; margin-bottom: 4px; }
+.nn-app-card__desc { font-size: 0.85rem; color: var(--nn-text-secondary); flex-grow: 1; margin-bottom: 12px; }
+/* Results Area - Tasks View */
+.nn-tasks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+.nn-preset-card {
+    display: flex; flex-direction: column; padding: 20px;
+    background-color: var(--nn-bg-surface); border-radius: 8px;
+    border: 1px solid var(--nn-border-color); cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.nn-preset-card:hover { transform: translateY(-3px); box-shadow: var(--nn-shadow-md); }
+.nn-preset-card__header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.nn-preset-card__icon { font-size: 2rem; }
+.nn-preset-card__name { font-size: 1.1rem; font-weight: 600; }
+.nn-preset-card__items { list-style: none; padding: 0; margin: 0; color: var(--nn-text-secondary); font-size: 0.9rem; }
+/* Selection Bar */
+.nn-selection-bar {
+    grid-column: 1 / -1; position: fixed; bottom: 0; left: 0; right: 0; height: 0;
+    z-index: var(--nn-z-selection-bar);
+    background-color: var(--nn-bg-surface);
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+    transform: translateY(100%); transition: transform 0.3s var(--nn-ease-in-out), height 0.3s var(--nn-ease-in-out);
+}
+.nn-selection-bar.nn-visible { transform: translateY(0); height: var(--nn-selection-bar-height); }
+.nn-selection-bar__content {
+    max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: flex-end;
+    height: 100%; padding: 0 24px; position: relative;
+}
+#nn-selection-count {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    text-align: center; font-weight: 700;
+}
+.nn-btn {
+    padding: 8px 16px; border-radius: 6px; font-weight: 500;
+    transition: background-color 0.2s;
+}
+#nn-open-drawer-btn {
+    font-weight: 700; border-radius: 999px; padding: 10px 20px;
+    background: linear-gradient(180deg, #00a2ff 0%, #006eff 100%);
+    color: white; border: 1px solid #0a5cff;
+    box-shadow: 0 6px 16px rgba(0, 82, 204, 0.35);
+}
+#nn-open-drawer-btn.nn-pulse { animation: nn-pulse 0.7s ease-out 1; }
+@keyframes nn-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 82, 204, 0.5); }
+    70% { transform: scale(1.03); box-shadow: 0 0 0 8px rgba(0, 82, 204, 0); }
+    100% { transform: scale(1); }
+}
+.nn-btn--primary { background-color: var(--nn-accent-primary); color: var(--nn-accent-primary-text); }
+.nn-btn--primary:hover { background-color: color-mix(in srgb, var(--nn-accent-primary) 85%, black); }
+.nn-btn--secondary { background-color: var(--nn-bg-surface-3); color: var(--nn-text-primary); }
+.nn-btn--secondary:hover { background-color: var(--nn-bg-surface-hover); }
+/* Selection Drawer */
+.nn-selection-drawer-scrim {
+    position: fixed; inset: 0; background-color: rgba(0,0,0,0.5);
+    z-index: calc(var(--nn-z-drawer) - 1);
+    opacity: 0; visibility: hidden; transition: opacity 0.3s;
+}
+.nn-selection-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: var(--nn-drawer-width);
+    max-width: 100vw; background-color: var(--nn-bg-base);
+    z-index: var(--nn-z-drawer); display: flex; flex-direction: column;
+    box-shadow: var(--nn-shadow-lg);
+    transform: translateX(100%); transition: transform 0.3s var(--nn-ease-in-out);
+}
+.nn-selection-drawer.nn-open { transform: translateX(0); }
+.nn-selection-drawer.nn-open + .nn-selection-drawer-scrim { opacity: 1; visibility: visible; }
+.nn-drawer-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 24px; border-bottom: 1px solid var(--nn-border-color);
+    flex-shrink: 0;
+}
+.nn-drawer-header__title { font-size: 1.25rem; font-weight: 600; }
+.nn-drawer-body { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+.nn-drawer-section { padding: 24px; border-bottom: 1px solid var(--nn-border-color); }
+.nn-drawer-section__title { font-weight: 600; margin-bottom: 16px; }
+.nn-selected-apps-list { list-style: none; padding: 0; margin: 0; }
+.nn-selected-app-item { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.nn-selected-app-item__icon { width: 24px; height: 24px; }
+.nn-selected-app-item__name { flex-grow: 1; }
+.nn-remove-item { margin-left: auto; width: 28px; height: 28px; font-size: 1.2rem; color: var(--nn-text-tertiary); }
+.nn-remove-item:hover { color: var(--nn-text-danger); background-color: color-mix(in srgb, var(--nn-text-danger) 15%, transparent); }
+.nn-fallback-badge {
+    font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    background-color: var(--nn-text-warning); color: #000;
+    padding: 2px 6px; border-radius: 4px; margin-left: 8px;
+}
+.nn-script-options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 24px; }
+.nn-drawer-footer {
+    flex-shrink: 0; padding: 16px 24px; background-color: var(--nn-bg-surface);
+    display: flex; flex-direction: column; gap: 16px;
+    border-top: 1px solid var(--nn-border-color);
+}
+.nn-script-preview-tabs { display: flex; border-bottom: 1px solid var(--nn-border-color); margin: -24px -24px 16px; }
+.nn-script-preview-tab { flex: 1; text-align: center; padding: 12px; font-weight: 500; color: var(--nn-text-secondary); cursor: pointer; border-bottom: 2px solid transparent; }
+.nn-script-preview-tab.nn-active { color: var(--nn-text-primary); border-color: var(--nn-accent-primary); }
+#nn-script-preview-container {
+    background-color: var(--nn-bg-base); border: 1px solid var(--nn-border-color);
+    border-radius: 6px; min-height: 200px; max-height: 40vh; overflow: auto;
+}
+#nn-script-preview {
+    font-family: var(--nn-font-mono); font-size: 0.9rem; white-space: pre;
+    padding: 16px;
+}
+.nn-drawer-footer__actions { display: flex; gap: 12px; }
+.nn-drawer-footer__actions .nn-btn {
+    flex-grow: 1; padding: 10px 16px;
+    border: 1px solid var(--nn-border-color);
+    background: linear-gradient(180deg, var(--nn-bg-surface-2) 0%, var(--nn-bg-surface-3) 100%);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+}
+.nn-drawer-footer__actions .nn-btn--primary {
+    background: linear-gradient(180deg, var(--nn-accent-primary) 0%, #1a5cff 100%);
+    border-color: var(--nn-accent-primary);
+    color: var(--nn-accent-primary-text);
+}
+/* Utility Classes */
+.nn-no-results, .nn-loading { text-align: center; padding: 40px; color: var(--nn-text-secondary); font-size: 1.1rem; }
+.nn-sentinel { height: 1px; }
+/* Toast Notifications */
+#nn-toast-container { position: fixed; bottom: 20px; right: 20px; z-index: var(--nn-z-toast); display: flex; flex-direction: column; gap: 10px; }
+.nn-toast {
+    padding: 12px 20px; border-radius: 6px; color: var(--nn-accent-primary-text);
+    box-shadow: var(--nn-shadow-lg); opacity: 0; transform: translateX(100%);
+    animation: nn-toast-in 0.3s forwards, nn-toast-out 0.3s 2.7s forwards;
+    display: flex; align-items: center; gap: 10px;
+}
+.nn-toast.nn-success { background-color: #4CAF50; }
+.nn-toast.nn-error { background-color: #F44336; }
+@keyframes nn-toast-in { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+@keyframes nn-toast-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
+/* Help Modal */
+.nn-modal-scrim {
+    position: fixed; inset: 0; background-color: rgba(0,0,0,0.6); z-index: var(--nn-z-modal);
+    opacity: 0; visibility: hidden; transition: opacity 0.3s;
+}
+.nn-modal-scrim.nn-visible { opacity: 1; visibility: visible; }
+.nn-modal-dialog {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
+    background-color: var(--nn-bg-surface); border-radius: 12px;
+    width: 90vw; max-width: 600px; box-shadow: var(--nn-shadow-lg);
+    opacity: 0; visibility: hidden; transition: all 0.3s;
+}
+.nn-modal-scrim.nn-visible .nn-modal-dialog { transform: translate(-50%, -50%) scale(1); opacity: 1; visibility: visible; }
+.nn-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--nn-border-color); }
+.nn-modal-title { font-size: 1.25rem; font-weight: 600; }
+.nn-modal-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+.nn-modal-body kbd {
+    background-color: var(--nn-bg-surface-3); border: 1px solid var(--nn-border-color-strong);
+    padding: 2px 6px; border-radius: 4px; font-family: var(--nn-font-mono);
+}
+#loading-indicator {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 1.2rem; color: var(--nn-text-secondary);
+}
+        `);
+    }
+
+
+    // -----------------------------------------------------------------------------
+    //  UI - SKELETON
+    // -----------------------------------------------------------------------------
+
+    function buildSkeleton() {
+        $('body > *').not('script, style').hide();
+
+        const skeletonHTML = `
+<div id="noninite-root" class="nn-root">
+    <header class="nn-header">
+        <div class="nn-header__logo">
+            <img src="${GENERIC_ICON_URL}" alt="NoNinite Logo">
+            <span>NoNinite</span>
+        </div>
+        <div class="nn-header__search-container">
+            <div class="nn-search-wrapper">
+                <svg class="nn-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="search" id="nn-search-input" class="nn-search-input" placeholder="Search for apps (Type ≥ 3 chars for fuzzy search)">
+            </div>
+            <div id="nn-intent-chips-container" class="nn-intent-chips"></div>
+        </div>
+        <div class="nn-header__actions">
+            <button type="button" id="nn-help-btn" class="nn-icon-btn" title="Help (?)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </button>
+            <button type="button" id="nn-theme-toggle" class="nn-icon-btn" title="Toggle Theme (t)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nn-sun-icon"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="nn-moon-icon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <aside id="nn-filter-rail" class="nn-filter-rail"></aside>
+
+    <nav class="nn-main-nav">
+        <div id="nn-view-tabs" class="nn-main-nav__tabs">
+            <button type="button" class="nn-tab-btn" data-view="category" aria-label="View by Category">Categories</button>
+            <button type="button" class="nn-tab-btn" data-view="all-apps" aria-label="View All Apps">All Apps</button>
+            <button type="button" class="nn-tab-btn" data-view="tasks" aria-label="View Tasks and Presets">Tasks & Presets</button>
+        </div>
+    </nav>
+
+    <main class="nn-main-content">
+        <div class="nn-content-toolbar">
+            <select id="nn-sort-by" class="nn-select-control">
+                <option value="smart">Sort: Smart</option>
+                <option value="name">Sort: Name (A-Z)</option>
+                <option value="downloads">Sort: Most Installed</option>
+                <option value="updated">Sort: Recently Updated</option>
+            </select>
+        </div>
+        <div class="nn-results-area">
+            <div class="nn-loading">Loading application catalog...</div>
+        </div>
+    </main>
+
+    <div id="nn-selection-bar" class="nn-selection-bar">
+        <div class="nn-selection-bar__content">
+            <span id="nn-selection-count" class="nn-selection-bar__count"></span>
+            <button type="button" id="nn-open-drawer-btn" class="nn-btn" aria-label="Open script generator">Generate Script</button>
+        </div>
+    </div>
+
+    <div id="nn-selection-drawer" class="nn-selection-drawer">
+        <div class="nn-drawer-header">
+            <h2 class="nn-drawer-header__title">Generate Installation Script</h2>
+            <button type="button" id="nn-close-drawer-btn" class="nn-icon-btn" title="Close (g or Esc)" aria-label="Close script generator">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="nn-drawer-body">
+            <div id="nn-drawer-selected-list-section" class="nn-drawer-section"></div>
+            <div class="nn-drawer-section">
+                <h3 class="nn-drawer-section__title">Script Options</h3>
+                <div id="nn-script-options-form" class="nn-script-options-grid"></div>
+            </div>
+            <div class="nn-drawer-footer">
+                <div class="nn-script-preview-tabs">
+                     <button type="button" data-type="powershell" class="nn-script-preview-tab nn-active">PowerShell</button>
+                     <button type="button" data-type="cmd" class="nn-script-preview-tab">CMD</button>
+                </div>
+                <div id="nn-script-preview-container">
+                    <pre><code id="nn-script-preview"></code></pre>
+                </div>
+                <div class="nn-drawer-footer__actions">
+                    <button type="button" id="nn-copy-script-btn" class="nn-btn nn-btn--secondary">Copy Script</button>
+                    <button type="button" id="nn-download-script-btn" class="nn-btn nn-btn--primary">Download</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="nn-selection-drawer-scrim"></div>
+
+    <div id="nn-help-modal-scrim" class="nn-modal-scrim">
+      <div id="nn-help-modal" class="nn-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="nn-help-modal-title">
+        <header class="nn-modal-header">
+            <h2 id="nn-help-modal-title" class="nn-modal-title">Help & Shortcuts</h2>
+            <button type="button" id="nn-close-modal-btn" class="nn-icon-btn" title="Close (? or Esc)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </header>
+        <div class="nn-modal-body">
+            <p><strong>Keyboard Shortcuts:</strong></p>
+            <ul>
+                <li><kbd>/</kbd> - Focus search bar</li>
+                <li><kbd>↑</kbd> / <kbd>↓</kbd> - Navigate items in the current view</li>
+                <li><kbd>Space</kbd> / <kbd>Enter</kbd> - Toggle selection for focused item</li>
+                <li><kbd>g</kbd> - Toggle script generator drawer</li>
+                <li><kbd>t</kbd> - Toggle theme (dark/light)</li>
+                <li><kbd>?</kbd> - Toggle this help modal</li>
+                <li><kbd>Esc</kbd> - Close drawer/modal, clear search</li>
+            </ul>
+        </div>
+      </div>
+    </div>
+
+    <div id="nn-toast-container"></div>
+    <div id="loading-indicator">Initializing NoNinite...</div>
+</div>
+`;
+        $('body').append(skeletonHTML);
+        $('#noninite-root').on('submit', e => e.preventDefault());
+    }
+
+
+    // -----------------------------------------------------------------------------
+    //  DATA FETCHING & PROCESSING
+    // -----------------------------------------------------------------------------
+    function normalizeRootArray(raw) {
+        if (Array.isArray(raw)) return raw;
+        const keys = ['packages', 'applications', 'items', 'data', 'results', 'apps'];
+        for (const k of keys) {
+            if (Array.isArray(raw?.[k])) return raw[k];
+        }
+        for (const [k, v] of Object.entries(raw || {})) {
+            if (Array.isArray(v)) return v;
+        }
+        return [];
+    }
+
+    function parseWingetId(pkg) {
+        const direct = pkg?.packageManagers?.winget?.id || pkg?.packageManagers?.Winget?.id;
+        if (direct) return String(direct).trim();
+        const cmd = pkg?.packageManagers?.winget?.command || pkg?.packageManagers?.Winget?.command || pkg?.installCommand || '';
+        const m = cmd.match(/winget\s+install\s+(?:--id\s+)?["']?([\w\.\-]+)["']?/i);
+        return m ? m[1] : '';
+    }
+
+    function parseChocoId(pkg) {
+        const direct = pkg?.packageManagers?.choco?.id || pkg?.packageManagers?.Chocolatey?.id || pkg?.chocoId || pkg?.packageId || pkg?.packageName;
+        if (direct) return String(direct).trim();
+        const cmd = pkg?.installCommand || '';
+        const m = cmd.match(/choco(?:latey)?\s+install\s+([^\s"]+)/i);
+        return m ? m[1] : '';
+    }
+
+    function safeSlug(name, fallback = '') {
+        const s = (fallback || name || '').toString().toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        return s || 'app';
+    }
+
+    async function fetchCatalogData() {
+        const lastFetch = GM_getValue('catalogLastFetchTime', 0);
+        const cachedData = GM_getValue('catalogData');
+        if (cachedData && (Date.now() - lastFetch < CACHE_DURATION_MS)) {
+            return JSON.parse(cachedData);
+        }
+
+        const tryFetch = (url) => new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'GET', url,
+                onload: res => {
+                    try {
+                        const data = JSON.parse(res.responseText);
+                        GM_setValue('catalogData', res.responseText);
+                        GM_setValue('catalogLastFetchTime', Date.now());
+                        resolve(data);
+                    } catch (e) { reject(`Failed to parse catalog data from ${url}`); }
+                },
+                onerror: () => reject(`Failed to fetch catalog data from ${url}.`)
+            });
+        });
+
+        try {
+            return await tryFetch(DATA_URL_PRIMARY);
+        } catch (error) {
+            console.warn(`NoNinite: Primary URL failed (${error}). Trying fallback.`);
+            return await tryFetch(DATA_URL_FALLBACK);
+        }
+    }
+
+    function processAndEnrichData(rawData) {
+        const rawApps = normalizeRootArray(rawData);
+        if (!rawApps || rawApps.length === 0) {
+            console.error("NoNinite Error: The fetched data is not an array or is empty. Schema might have changed.");
+            if (rawData) console.error("NoNinite Diagnostics: Root object keys are:", Object.keys(rawData));
+            return;
+        }
+
+        const unmappedCategories = new Set();
+        let enrichedApps = rawApps.map(pkg => {
+            const name = pkg.name;
+            if (!name) return null;
+
+            const wingetId = parseWingetId(pkg);
+            const chocoId = parseChocoId(pkg);
+
+            if (!wingetId && !chocoId) return null; // Skip if no usable installer ID
+
+            const slug = safeSlug(name, pkg.slug);
+            const description = pkg.summary || pkg.shortDescription || pkg.oneLiner || pkg.description || pkg.notes || '';
+            const tagContent = Array.isArray(pkg.tags) ? pkg.tags.join(' ') : (typeof pkg.tags === 'string' ? pkg.tags : '');
+            const allTextContent = `${name} ${description} ${tagContent}`.toLowerCase();
+
+            let category = "Utilities & Tools"; // Default
+            const sourceCat = (pkg.categorization?.mainCategory || '').toLowerCase().trim().replace(/ & /g, ' and ');
+            if (CANONICAL_CATEGORY_MAP[sourceCat]) {
+                category = CANONICAL_CATEGORY_MAP[sourceCat];
+            } else {
+                let found = false;
+                for (const mapping of KEYWORD_CATEGORY_MAP) {
+                    if (mapping.keywords.some(kw => allTextContent.includes(kw))) {
+                        category = mapping.category;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found && sourceCat && pkg.categorization?.mainCategory) {
+                    unmappedCategories.add(pkg.categorization.mainCategory);
+                }
+            }
+
+            const lastUpdated = pkg.lastUpdated ? new Date(pkg.lastUpdated) : null;
+            const daysSinceUpdate = lastUpdated ? (Date.now() - lastUpdated.getTime()) / (1000 * 3600 * 24) : 9999;
+
+            // Icon Fallback Chain
+            const iconSrcs = [];
+            if (chocoId) {
+                iconSrcs.push(`https://community.chocolatey.org/content/packageimages/${encodeURIComponent(chocoId)}.png`);
+                iconSrcs.push(`https://community.chocolatey.org/content/packageimages/${encodeURIComponent(chocoId)}.jpg`);
+            }
+            if (pkg.iconUrl) iconSrcs.push(pkg.iconUrl);
+            iconSrcs.push(`${GH_REPO_RAW}/assets/appicons/${slug}.png`);
+            iconSrcs.push(`${GH_REPO_RAW}/assets/appicons/${slug}.svg`);
+            iconSrcs.push(GENERIC_ICON_URL);
+
+            const sourceTags = pkg.categorization?.subCategories || [];
+            const appTags = new Set(sourceTags.map(t => t.charAt(0).toUpperCase() + t.slice(1)));
+
+            return {
+                id: slug, name, wingetId, chocoId,
+                description, iconSrcs, downloads: pkg.downloads || 0, lastUpdated,
+                sourceTags: sourceTags,
+                nameLower: name.toLowerCase(),
+                descLower: description.toLowerCase(),
+                tagsLower: sourceTags.join(' ').toLowerCase(),
+                facets: {
+                    installers: { winget: !!wingetId, choco: !!chocoId },
+                    license: "Unknown", arch: [], installType: [], popularity: 'all',
+                    tags: [...appTags],
+                },
+                category,
+                smartScore: (pkg.downloads || 1) * (1 + 0.5 * Math.max(0, 1 - (daysSinceUpdate / 365))),
+            };
+        }).filter(Boolean);
+
+        const uniqueApps = new Map();
+        enrichedApps.forEach(app => {
+            const existing = uniqueApps.get(app.name.toLowerCase());
+            if (!existing || (app.facets.installers.winget && !existing.facets.installers.winget) || app.downloads > existing.downloads) {
+                uniqueApps.set(app.name.toLowerCase(), app);
+            }
+        });
+
+        if (unmappedCategories.size > 0) {
+            console.warn('NoNinite Audit: Unmapped Source Categories ->', [...unmappedCategories]);
+        }
+
+        state.allApps = [...uniqueApps.values()];
+        console.log('NoNinite: Processed', state.allApps.length, 'unique applications.');
+
+        // Determine dataset capabilities and reconcile filters
+        const DATASET_CAPS = {
+            winget: state.allApps.some(a => a.facets.installers.winget),
+            choco:  state.allApps.some(a => a.facets.installers.choco),
+        };
+        state.__caps = DATASET_CAPS;
+
+        const f = state.filters.installer;
+        const impossibleWinget = (f === 'winget' && !DATASET_CAPS.winget);
+        const impossibleChoco = (f === 'choco' && !DATASET_CAPS.choco);
+
+        if (impossibleWinget || impossibleChoco) {
+            let newF = 'any';
+            let reason = 'the dataset';
+            if (impossibleWinget && DATASET_CAPS.choco) {
+                newF = 'choco';
+                reason = 'Chocolatey is available';
+            } else if (impossibleChoco && DATASET_CAPS.winget) {
+                newF = 'winget';
+                reason = 'Winget is available';
+            }
+            state.filters.installer = newF;
+            saveState('filters');
+            showToast(`Installer filter auto-set to "${newF}" (${reason})`, 4000, 'success');
+        }
+
+
+        if (state.allApps.length > 0) {
+            showToast(`Loaded ${state.allApps.length} applications`, 3000, 'success');
+        } else {
+            showToast('Failed to parse apps. Check console for details.', 5000, 'error');
+        }
+    }
+
+    function processDeferredData() {
+        const tagFrequency = new Map();
+
+        // Popularity Tiers
+        const downloadCounts = state.allApps.map(a => a.downloads).sort((a, b) => b - a);
+        const p90_threshold = downloadCounts[Math.floor(0.1 * downloadCounts.length)] || 0;
+
+        state.allApps.forEach(app => {
+            // Text content for facet detection
+            const text = `${app.nameLower} ${app.descLower} ${app.tagsLower}`;
+
+            // Popularity
+            if (app.downloads >= p90_threshold && p90_threshold > 0) app.facets.popularity = 'very-popular';
+
+            // License
+            if (/\b(oss|open source)\b/i.test(text)) app.facets.license = "Open Source";
+            else if (/\b(freeware|free to use)\b/i.test(text)) app.facets.license = "Freeware";
+            else if (/\b(commercial|paid|proprietary)\b/i.test(text)) app.facets.license = "Commercial";
+
+            // Arch
+            if (/\b(x64|64-bit)\b/i.test(text)) app.facets.arch.push('x64');
+            if (/\b(x86|32-bit)\b/i.test(text)) app.facets.arch.push('x86');
+
+            // Install Type
+            if (/\b(portable)\b/i.test(text)) app.facets.installType.push('Portable');
+
+            // Tags
+            const appTags = new Set(app.facets.tags);
+            FACET_KEYWORDS.forEach(kw => {
+                if (text.includes(kw)) {
+                    appTags.add(kw.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
+                }
+            });
+            app.facets.tags = [...appTags];
+            app.facets.tags.forEach(tag => tagFrequency.set(tag, (tagFrequency.get(tag) || 0) + 1));
+        });
+
+        // Compute top tags
+        state.topTags = [...tagFrequency.entries()]
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 30)
+            .map(([tag]) => tag);
+
+        console.log('NoNinite: Deferred processing complete.');
+    }
+
+
+    // -----------------------------------------------------------------------------
+    //  UI - RENDERING & LOGIC
+    // -----------------------------------------------------------------------------
+    let fuse;
+    let allAppsObserver;
+    const categoryObservers = [];
+    let lastSearchQuery = null;
+
+    function initializeSearch() {
+        if (!state.allApps.length) return;
+        const options = {
+           keys: [{ name:'name', weight:1.0 }, { name:'description', weight:0.6 }, { name:'facets.tags', weight:0.4 }],
+           threshold: 0.3,
+           distance: 100,
+           minMatchCharLength: 3,
+           ignoreLocation: true,
+           includeScore: false,
+        };
+        fuse = new Fuse(state.allApps, options);
+    }
+
+    function applyFiltersAndSort() {
+        let results = state.allApps;
+        const { search, ...activeFilters } = state.filters;
+        const searchQuery = search.trim().toLowerCase();
+
+        if (searchQuery === lastSearchQuery) return;
+        lastSearchQuery = searchQuery;
+
+        // 1. Search
+        if (searchQuery) {
+            if (searchQuery.length < 3 || !fuse) { // Fast path for short queries or before Fuse is ready
+                results = results.filter(app =>
+                    app.nameLower.includes(searchQuery) ||
+                    app.descLower.includes(searchQuery) ||
+                    app.tagsLower.includes(searchQuery)
+                );
+            } else { // Fuzzy path with Fuse.js
+                let finalQuery = SEARCH_ALIASES[searchQuery] || searchQuery;
+                results = fuse.search(finalQuery, { limit: 500 });
+            }
+        }
+
+        // 2. Facet Filtering
+        results = results.filter(app => {
+            const f = activeFilters;
+            if (f.installer === 'winget' && !app.facets.installers.winget) return false;
+            if (f.installer === 'choco' && !app.facets.installers.choco) return false;
+            if (f.popularity === 'very-popular' && app.facets.popularity !== 'very-popular') return false;
+            if (f.license.length && !f.license.includes(app.facets.license)) return false;
+            if (f.arch.length && !f.arch.some(a => app.facets.arch.includes(a))) return false;
+            if (f.installType.length && !f.installType.some(it => app.facets.installType.includes(it))) return false;
+            if (f.tags.length && !f.tags.every(t => app.facets.tags.includes(t))) return false;
+            return true;
+        });
+
+        // 3. Sorting
+        const { sortBy } = state.options;
+        results.sort((a, b) => {
+            if (sortBy === 'smart' && !searchQuery) return b.smartScore - a.smartScore; // Smart score only when not searching
+            if (sortBy === 'name') return a.name.localeCompare(b.name);
+            if (sortBy === 'downloads') return b.downloads - a.downloads;
+            if (sortBy === 'updated') return (b.lastUpdated?.getTime() || 0) - (a.lastUpdated?.getTime() || 0);
+            return a.name.localeCompare(b.name); // Default to name sort if smart score is off
+        });
+
+        state.filteredApps = results;
+    }
+
+    function masterRender() {
+        requestAnimationFrame(() => {
+            applyFiltersAndSort();
+            switch (state.viewMode) {
+                case 'category': renderCategoryView(state.filteredApps); break;
+                case 'all-apps': renderAllAppsView(state.filteredApps); break;
+                case 'tasks': renderTasksView(); break;
+            }
+            wireIconFallbacks();
+            updateSelectionStateOnItems();
+        });
+    }
+
+    function createAppListItemHTML(app) {
+        const { winget, choco } = app.facets.installers;
+        return `
+            <li class="nn-app-list-item" data-app-name="${escapeHtml(app.name)}" tabindex="0" role="listitem">
+                <img src="${app.iconSrcs[0]}" data-srcs='${JSON.stringify(app.iconSrcs.slice(1))}' class="nn-app-list-item__icon" alt="" loading="lazy">
+                <div class="nn-app-list-item__info">
+                    <div class="nn-app-list-item__name" title="${escapeHtml(app.name)}">${escapeHtml(app.name)}</div>
+                    <div class="nn-app-list-item__desc" title="${escapeHtml(app.description)}">${escapeHtml(app.description)}</div>
+                </div>
+                <div class="nn-app-list-item__actions">
+                    <button type="button" class="nn-installer-toggle" data-type="winget" title="Install with Winget" aria-pressed="false" ${!winget ? 'disabled' : ''}>W</button>
+                    <button type="button" class="nn-installer-toggle" data-type="choco" title="Install with Chocolatey" aria-pressed="false" ${!choco ? 'disabled' : ''}>C</button>
+                </div>
+            </li>`;
+    }
+
+    function createAppCardHTML(app) {
+        const { winget, choco } = app.facets.installers;
+        return `
+            <div class="nn-app-card" data-app-name="${escapeHtml(app.name)}" tabindex="0" role="listitem">
+                <img src="${app.iconSrcs[0]}" data-srcs='${JSON.stringify(app.iconSrcs.slice(1))}' class="nn-app-card__icon" alt="" loading="lazy">
+                <div class="nn-app-card__name">${escapeHtml(app.name)}</div>
+                <p class="nn-app-card__desc">${escapeHtml(app.description)}</p>
+                <div class="nn-app-list-item__actions">
+                    <button type="button" class="nn-installer-toggle" data-type="winget" title="Install with Winget" aria-pressed="false" ${!winget ? 'disabled' : ''}>W</button>
+                    <button type="button" class="nn-installer-toggle" data-type="choco" title="Install with Chocolatey" aria-pressed="false" ${!choco ? 'disabled' : ''}>C</button>
+                </div>
+            </div>`;
+    }
+
+    function renderCategoryView(apps) {
+        const $resultsArea = $('.nn-results-area').empty().removeClass('nn-tasks-grid nn-all-apps-grid');
+        categoryObservers.forEach(obs => obs.disconnect());
+        categoryObservers.length = 0;
+
+        if (apps.length === 0) {
+            $resultsArea.html('<p class="nn-no-results">No applications match your criteria.</p>');
+            return;
+        }
+
+        const grouped = apps.reduce((acc, app) => {
+            (acc[app.category] = acc[app.category] || []).push(app);
+            return acc;
+        }, {});
+
+        const $pinnedContainer = $('<div class="nn-pinned-categories-container"></div>').appendTo($resultsArea);
+        const $otherContainer = $('<div class="nn-other-categories-container"></div>').appendTo($resultsArea);
+
+        let columnsRendered = 0;
+        const renderColumn = (category, container) => {
+            if (!grouped[category] || grouped[category].length === 0) return;
+
+            columnsRendered++;
+            const $column = $(`
+                <div class="nn-category-column" data-category="${escapeHtml(category)}">
+                    <h3 class="nn-category-column__title">${escapeHtml(category)}</h3>
+                    <ul class="nn-app-list"></ul>
+                </div>
+            `).appendTo(container);
+
+            const allAppsInCat = grouped[category];
+            const initialApps = allAppsInCat.slice(0, CATEGORY_COLUMN_INITIAL_COUNT);
+            const $list = $column.find('.nn-app-list');
+            $list.html(initialApps.map(createAppListItemHTML).join(''));
+            $column.data('app-buffer', allAppsInCat.slice(CATEGORY_COLUMN_INITIAL_COUNT));
+
+            if (allAppsInCat.length > CATEGORY_COLUMN_INITIAL_COUNT) {
+                 $list.append('<div class="nn-sentinel"></div>');
+                 setupColumnObserver($column[0]);
+            }
+        };
+
+        CANONICAL_CATEGORIES.forEach(cat => {
+            const container = PINNED_CATEGORIES.includes(cat) ? $pinnedContainer : $otherContainer;
+            renderColumn(cat, container);
+        });
+
+        if (columnsRendered === 0) {
+            $resultsArea.html(`
+                <div class="nn-no-results">
+                    <p>No categories to show for your current filters.</p>
+                </div>`);
+        }
+    }
+
+    function setupColumnObserver(columnElement) {
+        const sentinel = columnElement.querySelector('.nn-sentinel');
+        if (!sentinel) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                const $column = $(columnElement);
+                const buffer = $column.data('app-buffer') || [];
+                if (buffer.length === 0) {
+                    if(observer) observer.disconnect();
+                    sentinel.remove();
+                    return;
+                }
+
+                const nextBatch = buffer.splice(0, CATEGORY_COLUMN_BATCH_SIZE);
+                const html = nextBatch.map(createAppListItemHTML).join('');
+                $(sentinel).before(html);
+                $column.data('app-buffer', buffer);
+
+                wireIconFallbacks($column.find('.nn-app-list-item:not(.wired)'));
+                updateSelectionStateOnItems($column.find('.nn-app-list-item:not(.wired-selection)'));
+            }
+        }, { root: columnElement.querySelector('.nn-app-list') });
+
+        observer.observe(sentinel);
+        categoryObservers.push(observer);
+    }
+
+    function renderAllAppsView(apps) {
+        if (allAppsObserver) {
+            allAppsObserver.disconnect();
+            allAppsObserver = null;
+        }
+        const $resultsArea = $('.nn-results-area').empty().addClass('nn-all-apps-grid').removeClass('nn-tasks-grid');
+
+        if (apps.length === 0) {
+            $resultsArea.html('<p class="nn-no-results">No applications match your criteria.</p>');
+            return;
+        }
+
+        let currentOffset = 0;
+
+        const renderBatch = () => {
+            const batch = apps.slice(currentOffset, currentOffset + ALL_APPS_BATCH_SIZE);
+            if (batch.length === 0) {
+                if(allAppsObserver) {
+                    allAppsObserver.disconnect();
+                    allAppsObserver = null;
+                }
+                return;
+            }
+            const html = batch.map(createAppCardHTML).join('');
+            const $sentinel = $resultsArea.find('.nn-sentinel');
+            if ($sentinel.length) {
+                $(html).insertBefore($sentinel);
+            } else {
+                $resultsArea.append(html);
+            }
+            currentOffset += batch.length;
+
+            wireIconFallbacks($resultsArea.find('.nn-app-card:not(.wired)'));
+            updateSelectionStateOnItems($resultsArea.find('.nn-app-card:not(.wired-selection)'));
+
+            if (currentOffset >= apps.length) {
+                 if(allAppsObserver) {
+                     allAppsObserver.disconnect();
+                     allAppsObserver = null;
+                 }
+                 $sentinel.remove();
+            }
+        };
+
+        $resultsArea.append('<div class="nn-sentinel"></div>');
+        allAppsObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                renderBatch();
+            }
+        }, { root: null, rootMargin: '500px' });
+
+        allAppsObserver.observe($resultsArea.find('.nn-sentinel')[0]);
+        renderBatch(); // Render the first batch immediately
+    }
+
+    function renderTasksView() {
+        if (allAppsObserver) {
+            allAppsObserver.disconnect();
+            allAppsObserver = null;
+        }
+        const $resultsArea = $('.nn-results-area').empty().addClass('nn-tasks-grid').removeClass('nn-all-apps-grid');
+
+        const html = state.presets.map(preset => `
+            <div class="nn-preset-card" data-preset-name="${escapeHtml(preset.name)}">
+                <div class="nn-preset-card__header">
+                    <span class="nn-preset-card__icon">${preset.icon}</span>
+                    <h3 class="nn-preset-card__name">${escapeHtml(preset.name)}</h3>
+                </div>
+                <ul class="nn-preset-card__items">
+                    ${preset.items.slice(0, 5).map(item => `<li>- ${escapeHtml(item)}</li>`).join('')}
+                    ${preset.items.length > 5 ? `<li>...and ${preset.items.length - 5} more</li>` : ''}
+                </ul>
+            </div>
+        `).join('');
+        $resultsArea.html(html);
+    }
+
+    function renderFilterRail() {
+        const { installer, license, arch, installType, popularity, tags } = state.filters;
+        const caps = state.__caps;
+        const html = `
+            <div class="nn-filter-group">
+                <h3 class="nn-filter-group__title">Installer</h3>
+                <div class="nn-filter-options" data-filter="installer">
+                    <label class="nn-radio-label"><input type="radio" name="installer" value="any" ${installer === 'any' ? 'checked' : ''}> Any</label>
+                    <label class="nn-radio-label"><input type="radio" name="installer" value="winget" ${installer === 'winget' ? 'checked' : ''} ${!caps.winget ? 'disabled' : ''}> Winget</label>
+                    <label class="nn-radio-label"><input type="radio" name="installer" value="choco" ${installer === 'choco' ? 'checked' : ''} ${!caps.choco ? 'disabled' : ''}> Chocolatey</label>
+                </div>
+            </div>
+             <div class="nn-filter-group">
+                <h3 class="nn-filter-group__title">Install Type</h3>
+                <div class="nn-filter-options" data-filter="installType">
+                    <label class="nn-checkbox-label"><input type="checkbox" name="installType" value="Portable" ${installType.includes('Portable') ? 'checked' : ''}> Portable</label>
+                </div>
+            </div>
+            <div class="nn-filter-group">
+                <h3 class="nn-filter-group__title">Architecture</h3>
+                <div class="nn-filter-options" data-filter="arch">
+                    <label class="nn-checkbox-label"><input type="checkbox" name="arch" value="x64" ${arch.includes('x64') ? 'checked' : ''}> x64</label>
+                    <label class="nn-checkbox-label"><input type="checkbox" name="arch" value="x86" ${arch.includes('x86') ? 'checked' : ''}> x86</label>
+                </div>
+            </div>
+            <div class="nn-filter-group">
+                <h3 class="nn-filter-group__title">License</h3>
+                <div class="nn-filter-options" data-filter="license">
+                    ${['Open Source', 'Freeware', 'Commercial'].map(l => `<label class="nn-checkbox-label"><input type="checkbox" name="license" value="${l}" ${license.includes(l) ? 'checked' : ''}> ${l}</label>`).join('')}
+                </div>
+            </div>
+            <div class="nn-filter-group">
+                <h3 class="nn-filter-group__title">Popularity</h3>
+                 <div class="nn-filter-options" data-filter="popularity">
+                    <label class="nn-radio-label"><input type="radio" name="popularity" value="all" ${popularity === 'all' ? 'checked' : ''}> All</label>
+                    <label class="nn-radio-label"><input type="radio" name="popularity" value="very-popular" ${popularity === 'very-popular' ? 'checked' : ''}> Very Popular</label>
+                </div>
+            </div>
+            <div class="nn-filter-group">
+                <h3 class="nn-filter-group__title">Tags</h3>
+                <div class="nn-filter-options nn-filter-options--row" data-filter="tags">
+                    ${state.topTags.map(t => `<button type="button" class="nn-tag-chip ${tags.includes(t) ? 'nn-active' : ''}" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join('')}
+                </div>
+            </div>`;
+        $('#nn-filter-rail').html(html);
+    }
+
+    function renderSelectionDrawer() {
+        const hasSelection = Object.keys(state.selection).length > 0;
+        if (!hasSelection) {
+            $('#nn-drawer-selected-list-section').html('<p class="nn-text-secondary">No applications selected.</p>');
+            generateScript();
+            return;
+        }
+
+        let wingetAppsHTML = '';
+        let chocoAppsHTML = '';
+
+        Object.entries(state.selection).forEach(([appName, installerType]) => {
+            const app = state.allApps.find(a => a.name === appName);
+            if (!app) return;
+
+            const { winget, choco } = app.facets.installers;
+            let finalInstaller = installerType;
+            let isFallback = false;
+
+            // Corrected fallback logic
+            if (finalInstaller === 'winget' && !winget && choco) {
+                finalInstaller = 'choco';
+                isFallback = true;
+            } else if (finalInstaller === 'choco' && !choco && winget) {
+                finalInstaller = 'winget';
+                isFallback = true;
+            }
+
+            const itemHTML = `
+                <li class="nn-selected-app-item" data-app-name="${escapeHtml(app.name)}">
+                    <img src="${app.iconSrcs[0]}" data-srcs='${JSON.stringify(app.iconSrcs.slice(1))}' class="nn-selected-app-item__icon" alt="">
+                    <span class="nn-selected-app-item__name">${escapeHtml(app.name)}</span>
+                    ${isFallback ? '<span class="nn-fallback-badge">Fallback</span>' : ''}
+                    <div class="nn-app-list-item__actions">
+                        <button type="button" class="nn-installer-toggle ${finalInstaller === 'winget' ? 'nn-selected' : ''}" data-type="winget" title="Install with Winget" aria-pressed="${finalInstaller === 'winget'}" ${!winget ? 'disabled' : ''}>W</button>
+                        <button type="button" class="nn-installer-toggle ${finalInstaller === 'choco' ? 'nn-selected' : ''}" data-type="choco" title="Install with Chocolatey" aria-pressed="${finalInstaller === 'choco'}" ${!choco ? 'disabled' : ''}>C</button>
+                    </div>
+                     <button type="button" class="nn-icon-btn nn-remove-item" title="Remove" aria-label="Remove ${escapeHtml(app.name)}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                     </button>
+                </li>`;
+
+            const effectiveInstaller = app.facets.installers[finalInstaller] ? finalInstaller : (finalInstaller === 'winget' ? 'choco' : 'winget');
+
+            if (effectiveInstaller === 'winget' && app.facets.installers.winget) {
+                 wingetAppsHTML += itemHTML;
+            } else if (app.facets.installers.choco) {
+                 chocoAppsHTML += itemHTML;
+            }
+        });
+
+        const selectedListHTML = `
+            ${wingetAppsHTML ? `<h3 class="nn-drawer-section__title">Winget Apps</h3><ul class="nn-selected-apps-list">${wingetAppsHTML}</ul>` : ''}
+            ${chocoAppsHTML ? `<h3 class="nn-drawer-section__title" style="margin-top: 16px;">Chocolatey Apps</h3><ul class="nn-selected-apps-list">${chocoAppsHTML}</ul>` : ''}
+        `;
+        $('#nn-drawer-selected-list-section').html(selectedListHTML);
+
+        // Render script options
+        const { type, scope, nonInteractive, acceptEulas, continueOnError, verbose } = state.scriptOptions;
+        const optionsHTML = `
+            ${ type === 'powershell' ? `
+            <label class="nn-checkbox-label"><input type="checkbox" name="verbose" ${verbose ? 'checked' : ''}> Verbose Output</label>
+            <label class="nn-checkbox-label"><input type="checkbox" name="continueOnError" ${continueOnError ? 'checked' : ''}> Continue on Error</label>
+            <div class="nn-filter-options" data-filter="scope">
+                <label class="nn-radio-label"><input type="radio" name="scope" value="machine" ${scope === 'machine' ? 'checked' : ''}> For All Users (Machine)</label>
+                <label class="nn-radio-label"><input type="radio" name="scope" value="user" ${scope === 'user' ? 'checked' : ''}> For Current User</label>
+            </div>
+            `: '' }
+            <label class="nn-checkbox-label"><input type="checkbox" name="nonInteractive" ${nonInteractive ? 'checked' : ''}> Non-Interactive / Silent</label>
+            <label class="nn-checkbox-label"><input type="checkbox" name="acceptEulas" ${acceptEulas ? 'checked' : ''}> Accept EULAs</label>
+        `;
+        $('#nn-script-options-form').html(optionsHTML);
+        wireIconFallbacks($('#nn-drawer-selected-list-section'));
+        generateScript();
+    }
+
+    const SCRIPT_PRELUDE_PS = `
+# --- NoNinite Script Prelude ---
+# Ensures Winget and Chocolatey are ready for use.
+
+# Ensure Chocolatey
+if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+  Write-Host "Chocolatey not found. Installing..." -ForegroundColor Yellow
+  Set-ExecutionPolicy Bypass -Scope Process -Force
+  [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+  iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+}
+choco upgrade chocolatey -y --no-progress
+
+# Ensure Winget / update sources
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+  try {
+    Write-Host "Updating Winget sources..."
+    winget source update
+  } catch {}
+  try {
+    Write-Host "Attempting to upgrade Winget client..."
+    winget upgrade --id Microsoft.DesktopAppInstaller -e --accept-package-agreements --accept-source-agreements --silent
+  } catch {}
+} else {
+  Write-Host "Winget not found. Attempting to install Desktop App Installer..." -ForegroundColor Yellow
+  try {
+    Invoke-WebRequest https://aka.ms/getwinget -OutFile "$env:TEMP\\WinGet.appxbundle"
+    Add-AppxPackage "$env:TEMP\\WinGet.appxbundle"
+  } catch {
+    Write-Host "Failed to install winget automatically. Please install 'App Installer' from Microsoft Store." -ForegroundColor Red
+  }
+}
+
+# --- End Prelude ---
+
+`;
+
+const SCRIPT_PRELUDE_CMD = `
+@echo off
+REM --- NoNinite Script Prelude ---
+echo Checking for prerequisites...
+
+where choco >nul 2>&1 || (
+  echo Chocolatey not found. Installing...
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol=[System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
+)
+echo Upgrading Chocolatey...
+choco upgrade chocolatey -y --no-progress
+
+where winget >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Winget not found. Please install 'App Installer' from the Microsoft Store.
+) else (
+    echo Updating Winget sources...
+    winget source update
+)
+
+echo.
+echo --- Starting Installations ---
+echo.
+`;
+
+
+    function generateScript() {
+        const { type, verbose, scope, nonInteractive, acceptEulas, continueOnError } = state.scriptOptions;
+        const wingetApps = [], chocoApps = [];
+
+        Object.entries(state.selection).forEach(([appName, installerType]) => {
+            const app = state.allApps.find(a => a.name === appName);
+            if (!app) return;
+
+            let finalInstaller = installerType;
+            if (finalInstaller === 'winget' && !app.facets.installers.winget && app.facets.installers.choco) {
+                finalInstaller = 'choco';
+            } else if (finalInstaller === 'choco' && !app.facets.installers.choco && app.facets.installers.winget) {
+                finalInstaller = 'winget';
+            }
+
+            if (finalInstaller === 'winget' && app.wingetId) {
+                wingetApps.push(app);
+            } else if (finalInstaller === 'choco' && app.chocoId) {
+                chocoApps.push(app);
+            }
+        });
+
+        const hasApps = wingetApps.length > 0 || chocoApps.length > 0;
+        let script = '';
+
+        if (type === 'powershell') {
+            if (hasApps) script += SCRIPT_PRELUDE_PS;
+            if(verbose && hasApps) script += `Write-Host "--- Starting NoNinite Installations ---" -ForegroundColor Green\n`;
+            if(continueOnError) script += `$ErrorActionPreference = "Continue"\n\n`;
+            if (chocoApps.length) {
+                if (verbose) script += `Write-Host "Installing Chocolatey packages..."\n`;
+                const chocoIds = chocoApps.map(a => a.chocoId).join(' ');
+                let chocoArgs = ['install', chocoIds, '-y'];
+                if (nonInteractive) chocoArgs.push('--no-progress');
+                script += `choco ${chocoArgs.join(' ')}\n`;
+            }
+            if (wingetApps.length) {
+                if (verbose) script += `\nWrite-Host "Installing Winget packages..."\n`;
+                wingetApps.forEach(app => {
+                    let wingetArgs = ['install', `--id "${app.wingetId}"`, '-e'];
+                    if (scope) wingetArgs.push(`--scope ${scope}`);
+                    if (nonInteractive) wingetArgs.push('--silent');
+                    if (acceptEulas) wingetArgs.push('--accept-package-agreements', '--accept-source-agreements');
+                    script += `winget ${wingetArgs.join(' ')}\n`;
+                });
+            }
+            if(verbose && hasApps) script += `\nWrite-Host "--- Script Finished ---" -ForegroundColor Green\n`;
+        } else { // CMD
+            if (hasApps) script += SCRIPT_PRELUDE_CMD;
+            if (chocoApps.length) {
+                script += 'echo Installing Chocolatey packages...\n';
+                const chocoIds = chocoApps.map(a => a.chocoId).join(' ');
+                let chocoArgs = ['install', chocoIds, '-y'];
+                 if (nonInteractive && !acceptEulas) chocoArgs.push('--no-progress'); // -y covers most cases
+                script += `choco ${chocoArgs.join(' ')}\n`;
+            }
+             if (wingetApps.length) {
+                script += '\necho Installing Winget packages...\n';
+                 wingetApps.forEach(app => {
+                    let wingetArgs = ['install', `--id "${app.wingetId}"`, '-e'];
+                     if (acceptEulas) wingetArgs.push('--accept-package-agreements');
+                     if (nonInteractive) wingetArgs.push('--silent');
+                    script += `winget ${wingetArgs.join(' ')}\n`;
+                });
+            }
+        }
+        $('#nn-script-preview').text(script || 'Select applications to generate a script.');
+    }
+
+
+    // -----------------------------------------------------------------------------
+    //  UI - HELPERS & STATE SYNC
+    // -----------------------------------------------------------------------------
+
+    function escapeHtml(str) {
+        const s = String(str ?? '');
+        return s.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+    }
+
+    function showToast(message, duration = 3000, type = 'success') {
+        const toast = $(`<div class="nn-toast nn-${type}">${message}</div>`);
+        $('#nn-toast-container').append(toast);
+        setTimeout(() => toast.remove(), duration + 300); // Add animation time
+    }
+
+    function wireIconFallbacks(context = document) {
+        const images = $(context).is('img') ? $(context) : $(context).find('.nn-app-list-item__icon, .nn-app-card__icon, .nn-selected-app-item__icon').not('.wired');
+        images.each(function() {
+            const $img = $(this);
+            $img.addClass('wired');
+            $img.on('error', function() {
+                const $this = $(this);
+                let srcs = $this.data('srcs');
+                if (typeof srcs === 'string') {
+                    try { srcs = JSON.parse(srcs); } catch { srcs = srcs.split(','); }
+                }
+                if (!Array.isArray(srcs)) { srcs = []; }
+
+                if (srcs.length > 0) {
+                    const nextSrc = srcs.shift();
+                    $this.data('srcs', srcs);
+                    $this.attr('src', nextSrc);
+                } else {
+                    $this.off('error');
+                }
+            });
+        });
+    }
+
+    function applyTheme() {
+        $('#noninite-root').attr('data-theme', state.theme);
+        if (state.theme === 'dark') {
+            $('.nn-sun-icon').hide();
+            $('.nn-moon-icon').show();
+        } else {
+            $('.nn-sun-icon').show();
+            $('.nn-moon-icon').hide();
+        }
+    }
+
+    function populateStaticControls() {
+        $('#nn-sort-by').val(state.options.sortBy);
+    }
+
+    function switchView(view, isInitial = false) {
+        state.viewMode = view;
+        $('.nn-tab-btn').removeClass('nn-active');
+        $(`.nn-tab-btn[data-view="${view}"]`).addClass('nn-active');
+        lastSearchQuery = null; // Force re-filter on view switch
+        if (!isInitial) {
+            masterRender();
+        }
+    }
+
+    function updateSelectionStateOnItems(context = document) {
+        const items = $(context).is('[data-app-name]') ? $(context) : $(context).find('[data-app-name]');
+        items.each(function() {
+            const $item = $(this);
+            const appName = $item.attr('data-app-name');
+            const selectedVia = state.selection[appName];
+            $item.addClass('wired-selection');
+            const $toggles = $item.find('.nn-installer-toggle');
+
+            if (selectedVia) {
+                $item.addClass('nn-selected');
+                $toggles.removeClass('nn-selected').attr('aria-pressed', 'false');
+                $toggles.filter(`[data-type="${selectedVia}"]`).addClass('nn-selected').attr('aria-pressed', 'true');
+            } else {
+                $item.removeClass('nn-selected');
+                $toggles.removeClass('nn-selected').attr('aria-pressed', 'false');
+            }
+        });
+    }
+
+    function updateSelectionUI() {
+        const count = Object.keys(state.selection).length;
+        const $bar = $('#nn-selection-bar');
+        const $count = $('#nn-selection-count');
+        const $cta = $('#nn-open-drawer-btn');
+
+        if (count > 0) {
+            $count.text(`${count} Application${count > 1 ? 's' : ''} Selected`);
+            $bar.addClass('nn-visible');
+            $cta.addClass('nn-pulse');
+            setTimeout(() => $cta.removeClass('nn-pulse'), 700);
+        } else {
+            $count.text('');
+            $bar.removeClass('nn-visible');
+            if (state.isSelectionDrawerOpen) toggleDrawer(false);
+        }
+
+        if (state.isSelectionDrawerOpen) {
+            renderSelectionDrawer();
+        }
+    }
+
+    function toggleDrawer(force) {
+        state.isSelectionDrawerOpen = typeof force === 'boolean' ? force : !state.isSelectionDrawerOpen;
+        const $drawer = $('#nn-selection-drawer');
+        if (state.isSelectionDrawerOpen) {
+            renderSelectionDrawer();
+            $drawer.addClass('nn-open').next('.nn-selection-drawer-scrim').addClass('nn-visible');
+        } else {
+            $drawer.removeClass('nn-open').next('.nn-selection-drawer-scrim').removeClass('nn-visible');
+        }
+    }
+
+    function toggleHelpModal(force) {
+        state.isHelpOpen = typeof force === 'boolean' ? force : !state.isHelpOpen;
+        $('#nn-help-modal-scrim').toggleClass('nn-visible', state.isHelpOpen);
+    }
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
         };
     }
 
-    function saveState() {
-        GM_setValue('theme', state.theme);
-        GM_setValue('hiddenCategories', state.hiddenCategories);
-        GM_setValue('collapsedCategories', state.collapsedCategories);
-        GM_setValue('versions', state.versions);
-        GM_setValue('options', state.options);
-        GM_setValue('presets', state.presets);
-        GM_setValue('appData', state.appData);
-        GM_setValue('appTags', state.appTags);
-        GM_setValue('stacks', state.stacks);
-        GM_setValue('editMode', state.editMode);
-    }
-
-    // ---------- App Data Fetching ----------
-    async function fetchAndProcessApps() {
-        const storedData = GM_getValue('appData');
-        const lastFetch = GM_getValue('lastFetchTime', 0);
-        const cacheDuration = 24 * 60 * 60 * 1000; // 24 hours
-
-        if (storedData && Object.keys(storedData).length > 0 && (Date.now() - lastFetch < cacheDuration)) {
-            console.log("NoNinite: Loaded application list from local cache.");
-            return Promise.resolve(storedData);
-        }
-
-        return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: 'https://raw.githubusercontent.com/ChrisTitusTech/winutil/refs/heads/main/config/applications.json',
-                onload: function (response) {
-                    try {
-                        const rawData = JSON.parse(response.responseText);
-                        const processedData = {};
-                        for (const appKey in rawData) {
-                            if (Object.hasOwnProperty.call(rawData, appKey)) {
-                                const appInfo = rawData[appKey];
-                                const category = appInfo.category || 'Uncategorized';
-                                if (!processedData[category]) processedData[category] = [];
-                                const app = {
-                                    name: appInfo.content || appKey,
-                                    wingetId: Array.isArray(appInfo.winget) ? appInfo.winget[0] : appInfo.winget,
-                                    chocoId: appInfo.choco,
-                                    link: appInfo.link || '#',
-                                    description: appInfo.description || ''
-                                };
-                                if (app.wingetId || app.chocoId) processedData[category].push(app);
-                            }
-                        }
-                        GM_setValue('appData', processedData);
-                        GM_setValue('lastFetchTime', Date.now());
-                        console.log("NoNinite: Fetched and saved new application list.");
-                        resolve(processedData);
-                    } catch (e) {
-                        console.error('Error parsing application JSON:', e);
-                        reject('Failed to parse application list.');
-                    }
-                },
-                onerror: function (error) {
-                    console.error('Error fetching application list:', error);
-                    reject('Failed to fetch application list.');
-                }
-            });
-        });
-    }
-
-    // ---------- Styles ----------
-    GM_addStyle(`
-    :root {
-        --bg-dark: #121212; --bg-light: #f8f9fa;
-        --panel-dark: #1e1e1e; --panel-light: #ffffff;
-        --text-dark: #e0e0e0; --text-light: #212529;
-        --accent: #0d47a1; --accent-hover: #1565c0; --accent-glow: rgba(13, 71, 161, 0.4);
-        --border-dark: #333; --border-light: #dee2e6;
-        --chip-bg-dark: rgba(255, 255, 255, 0.1); --chip-bg-light: #e9ecef;
-        --highlight: #ffc107; --danger: #d32f2f; --danger-hover: #b71c1c;
-        --font-sans: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-    }
-    @keyframes pulse-glow {
-        0% { transform: scale(1); box-shadow: 0 0 4px rgba(41, 182, 246, 0.5), 0 0 8px rgba(41, 182, 246, 0.3); }
-        50% { transform: scale(1.03); box-shadow: 0 0 8px rgba(41, 182, 246, 0.8), 0 0 16px rgba(41, 182, 246, 0.5); }
-        100% { transform: scale(1); box-shadow: 0 0 4px rgba(41, 182, 246, 0.5), 0 0 8px rgba(41, 182, 246, 0.3); }
-    }
-    html, body { font-family: var(--font-sans); height: 100%; margin: 0; overflow-x: hidden; scroll-behavior: smooth; }
-    body.dark-theme { background: var(--bg-dark) !important; color: var(--text-dark); }
-    body.light-theme { background: var(--bg-light) !important; color: var(--text-light); }
-
-    /* Layout */
-    #pro-control-app-container { display: flex; flex-direction: column; min-height: 100vh; }
-    #main-content { display: flex; flex-grow: 1; gap: 24px; padding: 24px; }
-    #left-rail { width: 240px; flex: 0 0 240px; position: sticky; top: 120px; align-self: flex-start; }
-    #main-rail { flex: 1; min-width: 0; }
-
-    /* Header */
-    #app-header { position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-    #sticky-header-content { background-color: #0d47a1; padding: 2px 10px 2px 10px; color: #ffffff; }
-    #header-top-row { display: flex; justify-content: space-between; align-items: center; }
-    #header-title-wrap { display: flex; align-items: center; gap: 12px; }
-    #header-logo { width: 32px; height: 32px; }
-    #app-title { font-size: 24px; font-weight: 600; color: #fff; }
-    #app-subtitle { font-size: 14px; font-weight: 300; opacity: 0.8; margin-left: 8px; color: #fff; }
-    #header-controls { display: flex; align-items: center; gap: 8px; }
-    #header-controls .control-btn svg, #header-controls .primary-btn { color: #fff; }
-
-    /* Selection & Toolbar */
-    #selection-info-bar { display: flex; align-items: center; gap: 16px; min-height: 40px; margin: 0; padding: 0; }
-    #selection-chips { display: flex; flex-wrap: wrap; gap: 8px; flex-grow: 1; }
-    #toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-top: 12px; margin-bottom: 4px; }
-    #search-wrap { flex: 1 1 300px; position: relative; }
-    #global-search { width: 100%; padding: 12px 40px 12px 16px; border-radius: 8px; outline: none; transition: all 0.2s ease-in-out; font-size: 15px; color: var(--text-dark); }
-    #global-search:focus { border-color: var(--highlight); box-shadow: 0 0 0 4px rgba(255,193,7,0.4); }
-    #search-hint { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--text-dark); opacity: 0.6; }
-
-    /* Buttons & Controls */
-    .btn { border-radius: 8px; font-weight: 600; padding: 10px 16px; border: 1px solid transparent; cursor: pointer; transition: all 0.2s ease-in-out; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-    .primary-btn { background: #1976d2; color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-    .primary-btn:hover { background: #1565c0; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(25,118,210,0.4); }
-    .primary-btn:disabled { background: #555; cursor: not-allowed; transform: none; box-shadow: none; opacity: 0.6; animation: none; }
-    .primary-btn.exciting-btn:not(:disabled) { animation: pulse-glow 2.5s infinite ease-in-out; }
-    body.light-theme .primary-btn:disabled { background: #ccc; }
-    .secondary-btn { border: 1px solid var(--border-dark); background: transparent; }
-    body.dark-theme .secondary-btn { color: var(--text-dark); }
-    body.light-theme .secondary-btn { border-color: var(--border-light); color: var(--text-light); }
-    .secondary-btn:hover { background: var(--chip-bg-dark); border-color: var(--accent-hover); }
-    body.light-theme .secondary-btn:hover { background: var(--chip-bg-light); }
-    .control-btn { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; transition: all .2s; }
-    .control-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.1); }
-    select.btn { text-align: left; }
-    .chip { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 16px; font-size: 13px; transition: all 0.2s ease; cursor: pointer; }
-    .chip:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.2); background: var(--danger); color: #fff; }
-    .chip:hover .src { color: #fff; }
-
-    /* App Grid */
-    .homepage-app-section { transition: all .3s; border-radius: 12px; padding: 20px; margin: 8px !important; width: calc(33.333% - 16px) !important; }
-    body.dark-theme .homepage-app-section { background: var(--panel-dark); border: 1px solid var(--border-dark); }
-    body.light-theme .homepage-app-section { background: var(--panel-light); border: 1px solid var(--border-light); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    .category-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; gap: 8px; }
-    .category-title-wrap { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 600; }
-    .app-list { list-style: none; padding-left: 0; max-height: 1000px; overflow: hidden; transition: max-height .4s ease-in-out, margin .4s; margin-top: 16px; }
-    .app-list.collapsed { max-height: 0; margin-top: 0 !important; }
-    .app-item-label { display: flex; align-items: center; justify-content: space-between; padding: 10px 8px; border-radius: 8px; gap: 8px; transition: background-color 0.2s; cursor: pointer; }
-    .app-item-label:hover, .app-item-label.kb-highlight { background: var(--accent-glow); }
-    .app-item-label.selected { background: var(--accent-glow); border: 1px solid var(--accent); }
-    .app-left { display: flex; align-items: center; gap: 10px; pointer-events: none; }
-    .app-favicon { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; background-color: rgba(255,255,255,0.1); }
-    .app-delete { display: none; color: var(--danger); cursor: pointer; font-weight: 700; pointer-events: auto !important; }
-    .install-options { pointer-events: none; }
-    .install-options label { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; font-size: 13px; opacity: .9; }
-
-    /* Modals */
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 10000; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity .3s; backdrop-filter: blur(5px); }
-    .modal { position: relative; width: 95%; max-width: 1100px; border-radius: 16px; overflow: hidden; transform: scale(.95); transition: transform .3s; display: flex; flex-direction: column; max-height: 90vh; }
-    body.dark-theme .modal { background: var(--panel-dark); border: 1px solid var(--border-dark); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
-    body.light-theme .modal { background: var(--panel-light); border: 1px solid var(--border-light); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border-dark); flex-shrink: 0; }
-    body.light-theme .modal-header { border-color: var(--border-light); }
-    .modal-close-btn { position: absolute; top: 12px; right: 12px; width:36px; height:36px; border-radius:50%; }
-    .modal-body { padding: 24px; overflow: auto; }
-    .settings-modal-body { display: grid; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); gap: 24px; }
-    .settings-group { display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--border-dark); padding: 16px; border-radius: 12px; }
-    body.light-theme .settings-group { border-color: var(--border-light); }
-    .settings-group h3 { margin: 0 0 8px 0; padding-bottom: 8px; border-bottom: 1px solid var(--border-dark); }
-    body.light-theme .settings-group h3 { border-color: var(--border-light); }
-    .settings-group label, .settings-group .toolbar-row { display: flex; align-items: center; justify-content: flex-start; gap: 8px; }
-    .settings-group select, .settings-group textarea { width: 100%; }
-
-    /* Script Modal */
-    .script-modal-body { padding: 0 24px 16px 24px; overflow: auto; }
-    .script-output-wrap { margin-bottom: 16px; }
-    .script-output-wrap h3 { display: flex; justify-content: space-between; align-items: center; }
-    .script-output-wrap textarea { width: 100%; min-height: 200px; font-family: 'Fira Code', 'Consolas', monospace; font-size: 13px; border-radius: 8px; padding: 12px; border: 1px solid var(--border-dark); }
-    body.dark-theme .script-output-wrap textarea { background: #111; color: #f3f3f3; }
-    body.light-theme .script-output-wrap textarea { background-color: #f8f9fa; border-color: var(--border-light); }
-    .script-modal-footer { padding: 16px 24px; display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid var(--border-dark); }
-    body.light-theme .script-modal-footer { border-color: var(--border-light); }
-
-    /* Custom Tooltip */
-    #app-tooltip {
-        position: absolute;
-        z-index: 10002;
-        padding: 15px;
-        border-radius: 12px;
-        max-width: 350px;
-        pointer-events: auto;
-        transition: opacity 0.2s ease-in-out;
-    }
-    body.dark-theme #app-tooltip { background: #2a2a2a; border: 1px solid #444; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
-    body.light-theme #app-tooltip { background: #ffffff; border: 1px solid #ccc; box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
-    #app-tooltip-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-    #app-tooltip-favicon { width: 32px; height: 32px; flex-shrink: 0; }
-    #app-tooltip-name { font-size: 16px; font-weight: 700; }
-    #app-tooltip-desc { font-size: 14px; margin-bottom: 12px; line-height: 1.5; }
-    #app-tooltip-link { font-size: 13px; font-weight: 600; text-decoration: none; }
-    body.dark-theme #app-tooltip-link { color: #64b5f6; }
-    body.light-theme #app-tooltip-link { color: #0277bd; }
-    #app-tooltip-link:hover { text-decoration: underline; }
-
-    /* Custom Overrides */
-    #get-script-btn { background-color: #263238; }
-    button.control-btn { color: #fafafa; background-color: transparent; }
-    button.control-btn:hover { color: #fff; }
-    #global-search { background-color: #212121; border-style: none; }
-    span.src { color: #29b6f6; }
-    button.secondary-btn.btn.clear-btn { margin-top: 3px; margin-bottom: -10px; background-color: #fb8c00; color: #ffebee; border: none; }
-    select#preset-select.secondary-btn.btn { color: #fafafa; background-color: #212121; }
-    button.secondary-btn.btn { color: #fafafa; }
-    div.chip { background-color: transparent; border: 1px solid var(--border-dark); }
-
-    .hidden { display: none !important; }
-    #loading-indicator { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; padding: 20px; background: var(--panel-dark); color: var(--text-dark); border-radius: 12px; z-index: 10001; }
-    `);
-
-    // ---------- UI Skeleton ----------
-    function generateStacksHTML() {
-        return `
-      <div id="stacks">
-        <h3>Quick Stacks</h3>
-        ${state.stacks.map(tag => `
-          <label><input type="checkbox" class="stack-filter" value="${escapeHtml(tag)}"> ${prettyTag(tag)}</label>
-        `).join('')}
-      </div>
-    `;
-    }
-
-    const mainLayoutHTML = `
-    <div id="loading-indicator">Loading Applications...</div>
-    <div id="pro-control-app-container" style="display: none;">
-      <header id="app-header">
-        <div id="sticky-header-content">
-            <div id="header-top-row">
-                <div id="header-title-wrap">
-                    <img id="header-logo" src="https://raw.githubusercontent.com/SysAdminDoc/NoNinite/refs/heads/main/assets/icons/favicon.ico" alt="NoNinite Logo">
-                    <div>
-                        <span id="app-title">NoNinite</span>
-                        <span id="app-subtitle">No Ninite installers, use these instead.</span>
-                    </div>
-                </div>
-                <div id="header-controls">
-                    <button id="theme-toggle-btn" class="control-btn" title="Toggle Theme">
-                        <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-                        <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                    </button>
-                    <button id="settings-btn" class="control-btn" title="Settings">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-settings" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path></svg>
-                    </button>
-                </div>
-            </div>
-            <div id="selection-info-bar">
-                 <div id="selection-chips"></div>
-                 <button id="clear-all-btn" class="secondary-btn btn clear-btn hidden" title="Clear all selections">Clear All</button>
-            </div>
-            <div id="toolbar">
-                <div id="search-wrap">
-                    <input id="global-search" type="text" placeholder="Search apps (/, ↑/↓ to navigate, Enter to select)" autocomplete="off" />
-                    <span id="search-hint">/</span>
-                </div>
-                <div class="toolbar-row" style="justify-content: flex-start; gap: 12px;">
-                    <select id="preset-select" class="secondary-btn btn">
-                        <option value="">Apply preset...</option>
-                    </select>
-                    <button id="get-script-btn" class="primary-btn btn exciting-btn" disabled>Generate Script</button>
-                </div>
-            </div>
-        </div>
-      </header>
-      <div id="main-content">
-        ${state.options.enableStacks ? `<div id="left-rail">${generateStacksHTML()}</div>` : `<div id="left-rail" class="hidden"></div>`}
-        <div id="main-rail">
-          <div>
-            <ul class="list-unstyled center-block js-masonry"></ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
-    const panelAndModalsHTML = `
-    <div id="app-tooltip" style="display:none;"></div>
-    <div class="modal-overlay settings-modal-overlay" style="display:none;opacity:0;">
-      <div class="modal settings-modal">
-        <div class="modal-header">
-          <h2>Settings</h2>
-        </div>
-        <button id="close-settings-modal-btn" class="control-btn modal-close-btn" title="Close">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-        <div class="modal-body settings-modal-body">
-          <div class="settings-group" id="generator-options">
-            <h3>Script Generation</h3>
-            <label>Winget Scope:
-              <select id="winget-scope" class="secondary-btn btn"><option value="machine">machine</option><option value="user">user</option></select>
-            </label>
-            <label><input type="checkbox" id="opt-winget-silent"> winget: --silent</label>
-            <label><input type="checkbox" id="opt-winget-disable-interactivity"> winget: --disable-interactivity</label>
-            <label><input type="checkbox" id="opt-winget-accept"> winget: accept agreements</label>
-            <label><input type="checkbox" id="opt-choco-noninteractive"> choco: -y</label>
-            <label><input type="checkbox" id="opt-choco-noprogress"> choco: --no-progress</label>
-            <label><input type="checkbox" id="opt-bootstrap"> Generate PowerShell bootstrap</label>
-          </div>
-           <div class="settings-group" id="ui-options">
-            <h3>Interface</h3>
-            <label><input type="checkbox" id="opt-enable-winget"> Enable Winget</label>
-            <label><input type="checkbox" id="opt-enable-choco"> Enable Chocolatey</label>
-            <small>At least one package manager must be enabled.</small>
-            <hr style="border-color: var(--border-dark); margin: 0; width: 100%;">
-            <label><input type="checkbox" id="opt-enable-stacks"> Enable Quick Stacks sidebar</label>
-            <label><input type="checkbox" id="opt-edit-mode"> Edit mode (inline app list delete)</label>
-          </div>
-          <div class="settings-group" id="presets-manager">
-            <h3>Presets</h3>
-            <div class="toolbar-row"><input id="preset-name" class="secondary-btn btn" placeholder="Preset name" style="flex:1;"></div>
-            <textarea id="preset-items" class="secondary-btn btn" placeholder="Items (comma-separated app names)" style="min-height: 80px;"></textarea>
-            <div class="toolbar-row"><button id="add-preset-btn" class="primary-btn btn">Add/Update</button></div>
-            <select id="preset-list" size="6" class="secondary-btn btn"></select>
-            <div class="toolbar-row">
-              <button id="delete-preset-btn" class="secondary-btn btn">Delete</button>
-              <button id="export-presets-btn" class="secondary-btn btn">Export</button>
-              <button id="import-presets-btn" class="secondary-btn btn">Import</button>
-            </div>
-          </div>
-          <div class="settings-group" id="config-io">
-            <h3>Configuration</h3>
-            <div class="toolbar-row">
-              <button id="export-config-btn" class="primary-btn btn">Export All</button>
-              <button id="import-config-btn" class="secondary-btn btn">Import All</button>
-              <button id="reset-config-btn" class="secondary-btn btn" style="border-color: var(--danger); color: var(--danger)!important;">Reset All</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="modal-overlay script-modal-overlay" style="display:none;opacity:0;">
-      <div class="modal script-modal">
-        <div class="modal-header">
-          <h2 id="script-modal-title">Generated Script</h2>
-        </div>
-        <button id="close-script-modal-btn" class="control-btn modal-close-btn" title="Close">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-        <div class="script-modal-body">
-          <div class="script-output-wrap">
-            <h3>
-                <span>PowerShell Bootstrap</span>
-                <button id="download-ps-btn" class="secondary-btn btn" title="Download as .ps1 file">Download</button>
-            </h3>
-            <textarea id="ps-bootstrap-output" readonly></textarea>
-          </div>
-          <div class="script-output-wrap">
-            <h3>
-                <span>Plain Commands</span>
-                <button id="download-plain-btn" class="secondary-btn btn" title="Download as .ps1 file">Download</button>
-            </h3>
-            <textarea id="plain-commands-output" readonly></textarea>
-          </div>
-        </div>
-        <div class="script-modal-footer">
-          <div>
-            <button id="copy-ps-btn" class="primary-btn btn">Copy Bootstrap</button>
-            <button id="copy-plain-btn" class="secondary-btn btn">Copy Plain</button>
-          </div>
-          <button id="copy-script-btn" class="primary-btn btn">Copy Both</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-    // ---------- Build UI ----------
-    function buildUI() {
-        $('body > *').not('script').hide();
-        $('body').prepend(mainLayoutHTML).append(panelAndModalsHTML);
-    }
-
-    // ---------- Theme ----------
-    function applyTheme() {
-        $('body').removeClass('dark-theme light-theme').addClass(state.theme + '-theme');
-        $('#theme-icon-sun').toggle(state.theme === 'light');
-        $('#theme-icon-moon').toggle(state.theme === 'dark');
-    }
-
-    // ---------- App Grid / Search / Stacks ----------
-    let fuse;
-    function buildFuseIndex() {
-        const items = [];
-        Object.entries(state.appData).forEach(([cat, apps]) => {
-            apps.forEach(app => items.push({ category: cat, name: app.name, wingetId: app.wingetId || '', chocoId: app.chocoId || '', description: app.description, link: app.link }));
-        });
-        fuse = new Fuse(items, { keys: ['name', 'wingetId', 'chocoId', 'category'], threshold: 0.35, includeScore: true });
-    }
-
-    function appHasAnySelectedStack(appName) {
-        const checked = $('.stack-filter:checked').map((_, el) => $(el).val()).get();
-        if (checked.length === 0) return true; // no stack filters means show all
-        const tags = state.appTags[appName] || [];
-        return tags.some(t => checked.includes(t));
-    }
-
-    function getFaviconUrl(link, source = 'duckduckgo') {
-        if (!link || link === '#') return '';
-        let hostname;
-        try {
-            hostname = new URL(link).hostname;
-        } catch (e) {
-            const domainMatch = link.match(/^(?:https?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^:\/\n?]+)/);
-            hostname = (domainMatch && domainMatch[1]) ? domainMatch[1] : null;
-        }
-        if (!hostname) return '';
-
-        switch(source) {
-            case 'google':
-                return `https://www.google.com/s2/favicons?sz=32&domain_url=${hostname}`;
-            case 'google_s2':
-                 return `https://s2.googleusercontent.com/s2/favicons?domain=${hostname}`;
-            case 'duckduckgo':
-            default:
-                return `https://icons.duckduckgo.com/ip3/${hostname}.ico`;
-        }
-    }
-
-    function attachFaviconErrorHandlers() {
-        $('.app-favicon:not(.error-handler-attached)').each(function() {
-            const $img = $(this);
-            $img.addClass('error-handler-attached');
-            $img.on('error', function() {
-                const sources = JSON.parse($img.attr('data-sources') || '[]');
-                if (sources.length > 0) {
-                    const nextSrc = sources.shift();
-                    $img.attr('data-sources', JSON.stringify(sources));
-                    $img.attr('src', nextSrc);
-                } else {
-                    $img.off('error');
-                    $img.hide();
-                }
-            });
-        });
-    }
-
-    function populateAppGrid() {
-        const $container = $('.js-masonry');
-        if (!$container.length) return;
-        $container.empty();
-
-        const showWinget = !!state.options.enableWinget;
-        const showChoco = !!state.options.enableChoco;
-        const singleManagerMode = showWinget !== showChoco;
-
-        Object.entries(state.appData).forEach(([categoryName, apps]) => {
-            let appItemsHTML = '';
-            apps.forEach(app => {
-                if (!appHasAnySelectedStack(app.name)) return;
-
-                const wingetAvailable = showWinget && app.wingetId;
-                const chocoAvailable = showChoco && app.chocoId;
-                if (!wingetAvailable && !chocoAvailable) return;
-
-                let optionsHTML = '';
-                if (singleManagerMode) {
-                    const type = wingetAvailable ? 'winget' : 'choco';
-                    const id = wingetAvailable ? app.wingetId : app.chocoId;
-                    optionsHTML = `<div class="install-options hidden"><label><input type="checkbox" class="app-checkbox" data-app="${escapeHtml(app.name)}" data-type="${type}" value="${escapeHtml(id)}"></label></div>`;
-                } else {
-                    const wingetOption = wingetAvailable ? `<label><input type="checkbox" class="app-checkbox" data-app="${escapeHtml(app.name)}" data-type="winget" value="${escapeHtml(app.wingetId)}"> Winget</label>` : '';
-                    const chocoOption = chocoAvailable ? `<label><input type="checkbox" class="app-checkbox" data-app="${escapeHtml(app.name)}" data-type="choco" value="${escapeHtml(app.chocoId)}"> Choco</label>` : '';
-                    optionsHTML = `<div class="install-options">${wingetOption} ${chocoOption}</div>`;
-                }
-
-                let faviconHTML;
-                if (faviconOverrides[app.name]) {
-                    faviconHTML = `<img src="${faviconOverrides[app.name]}" class="app-favicon" alt="">`;
-                } else {
-                    const faviconSources = [
-                        getFaviconUrl(app.link, 'duckduckgo'),
-                        getFaviconUrl(app.link, 'google'),
-                        getFaviconUrl(app.link, 'google_s2')
-                    ].filter(Boolean);
-                    const primaryFavicon = faviconSources.shift() || '';
-                    const sourcesAttr = `data-sources='${JSON.stringify(faviconSources)}'`;
-                    faviconHTML = `<img src="${primaryFavicon}" class="app-favicon" alt="" ${sourcesAttr}>`;
-                }
-
-
-                appItemsHTML += `
-                <li data-app-name="${escapeHtml(app.name)}">
-                    <div class="app-item-label">
-                        <div class="app-left">
-                            ${faviconHTML}
-                            <span class="app-name" data-app="${escapeHtml(app.name)}">${escapeHtml(app.name)}</span>
-                        </div>
-                        ${optionsHTML}
-                    </div>
-                     <span class="app-delete" data-cat="${escapeHtml(categoryName)}" data-app="${escapeHtml(app.name)}" title="Remove app">×</span>
-                </li>`;
-            });
-
-            if (!appItemsHTML.trim()) return;
-            const isCollapsed = !!state.collapsedCategories[categoryName];
-            $container.append(`
-                <li class="homepage-app-section" data-category="${escapeHtml(categoryName)}">
-                <div class="category-header ${isCollapsed ? 'collapsed' : ''}">
-                    <div class="category-title-wrap"><h4>${escapeHtml(categoryName)}</h4></div>
-                    <span class="toggle-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
-                </div>
-                <ul class="app-list ${isCollapsed ? 'collapsed' : ''}">${appItemsHTML}</ul>
-                </li>`);
-        });
-
-        toggleEditModeUI(state.editMode);
-        updateSelectionsFromState();
-        attachFaviconErrorHandlers();
-        const $m = $('.js-masonry');
-        if ($m.data('masonry')) $m.masonry('reloadItems').masonry('layout');
-        else $m.masonry({ itemSelector: '.homepage-app-section', fitWidth: true, transitionDuration: '0.3s' });
-    }
-
-    function updateSelectionsFromState() {
-        $('.app-item-label').removeClass('selected');
-        $('.app-checkbox:checked').each(function() {
-            $(this).closest('.app-item-label').addClass('selected');
-        });
-    }
-
-    function toggleEditModeUI(on) {
-        $('.app-delete').css('display', on ? 'inline-block' : 'none');
-    }
-
-    // ---------- Selection / chips ----------
-    function getSelections() {
-        const wingetApps = $('.app-checkbox[data-type="winget"]:checked').map((_, el) => $(el).val()).get();
-        const chocoApps = $('.app-checkbox[data-type="choco"]:checked').map((_, el) => $(el).val()).get();
-        const byApp = {};
-        $('.app-checkbox:checked').each((_, el) => {
-            const $el = $(el);
-            const app = $el.data('app');
-            const type = $el.data('type');
-            const id = $el.val();
-            if (!byApp[app]) byApp[app] = {};
-            byApp[app][type] = id;
-        });
-        return { wingetApps, chocoApps, byApp };
-    }
-
-    function renderChips() {
-        const { byApp } = getSelections();
-        const $wrap = $('#selection-chips').empty();
-        const selectionCount = Object.keys(byApp).length;
-
-        $('#clear-all-btn').toggleClass('hidden', selectionCount === 0);
-
-        Object.entries(byApp).forEach(([app, sources]) => {
-            Object.entries(sources).forEach(([src, id]) => {
-                const key = `${src}:${id}`;
-                const ver = state.versions[key] ? `@${state.versions[key]}` : '';
-                const chipHTML = `<div class="chip" title="Click to remove ${escapeHtml(app)}" data-type="${src}" data-id="${cssEscape(id)}">
-                                    <span class="src">${src.toUpperCase()}</span> ${escapeHtml(app)}${escapeHtml(ver)}
-                                  </div>`;
-                $wrap.append(chipHTML);
-            });
-        });
-    }
-
-    function updateGetButton() {
-        const { wingetApps, chocoApps } = getSelections();
-        const $button = $('#get-script-btn');
-        const selectionCount = wingetApps.length + chocoApps.length;
-        if (selectionCount > 0) $button.text(`Generate Script (${selectionCount})`).prop('disabled', false);
-        else $button.text('Generate Script').prop('disabled', true);
-        renderChips();
-        updateSelectionsFromState();
-        updateURLHash();
-    }
-
-    function preferredSourceFor(app) {
-        if (state.options.enableWinget && app.wingetId) return 'winget';
-        if (state.options.enableChoco && app.chocoId) return 'choco';
-        return null;
-    }
-
-    function appByName(name) {
-        for (const cat in state.appData) {
-            const app = state.appData[cat].find(a => a.name === name);
-            if (app) return app;
-        }
-        return null;
-    }
-
-    // ---------- Search / keyboard ----------
-    let kbIndex = -1, kbMatches = [];
-    function clearHighlights() { $('.app-item-label').removeClass('kb-highlight'); }
-    function highlightByName(name) {
-        clearHighlights();
-        const $el = $(`li[data-app-name="${cssEscape(name)}"]`).find('.app-item-label');
-        if ($el.length) { $el.addClass('kb-highlight')[0].scrollIntoView({ block: 'center', behavior: 'smooth' }); }
-    }
-    function toggleFocused() {
-        const item = kbMatches[kbIndex];
-        if (!item) return;
-        $(`li[data-app-name="${cssEscape(item.name)}"]`).find('.app-item-label').trigger('click');
-    }
-
-    // ---------- URL share ----------
-    function updateURLHash() {
-        const { wingetApps, chocoApps } = getSelections();
-        const params = new URLSearchParams();
-        if (wingetApps.length) params.set('winget', wingetApps.join(','));
-        if (chocoApps.length) params.set('choco', chocoApps.join(','));
-        const h = params.toString();
-        if (h) history.replaceState(null, '', `#${h}`);
-        else history.replaceState(null, '', location.pathname + location.search);
-    }
-    function loadFromHash() {
-        if (!location.hash) return;
-        try {
-            const sp = new URLSearchParams(location.hash.slice(1));
-            const w = (sp.get('winget') || '').split(',').filter(Boolean);
-            const c = (sp.get('choco') || '').split(',').filter(Boolean);
-            w.forEach(id => $(`.app-checkbox[data-type="winget"][value="${cssEscape(id)}"]`).prop('checked', true));
-            c.forEach(id => $(`.app-checkbox[data-type="choco"][value="${cssEscape(id)}"]`).prop('checked', true));
-        } catch (e) {
-            console.error("Failed to parse URL hash:", e);
-            history.replaceState(null, '', location.pathname + location.search);
-        }
-    }
-    function deduplicateSelectionsFromURL() {
-        const { byApp } = getSelections();
-        for (const appName in byApp) {
-            const sources = byApp[appName];
-            if (sources.winget && sources.choco) {
-                const app = appByName(appName);
-                const preferred = preferredSourceFor(app);
-                if (preferred === 'winget') {
-                    $(`.app-checkbox[data-app="${cssEscape(appName)}"][data-type="choco"]`).prop('checked', false);
-                } else if (preferred === 'choco') {
-                     $(`.app-checkbox[data-app="${cssEscape(appName)}"][data-type="winget"]`).prop('checked', false);
-                }
-            }
-        }
-    }
-
-    // ---------- Script generation ----------
-    function buildPlainCommands({ wingetApps, chocoApps }) {
-        let finalChocoApps = state.options.enableChoco ? chocoApps : [];
-        const wopts = [];
-        if (state.options.wingetAccept) wopts.push('--accept-package-agreements', '--accept-source-agreements');
-        if (state.options.wingetSilent) wopts.push('--silent');
-        if (state.options.wingetDisableInteractivity) wopts.push('--disable-interactivity');
-        if (state.options.wingetScope) wopts.push(`--scope ${state.options.wingetScope}`);
-        const wingetParts = wingetApps.map(id => `--id "${id}"`);
-        const chocoOpts = [];
-        if (state.options.chocoY) chocoOpts.push('-y');
-        if (state.options.chocoNoProgress) chocoOpts.push('--no-progress');
-        let plain = '';
-        if (wingetParts.length && state.options.enableWinget) plain += `# Winget Install\nwinget install ${wopts.join(' ')} ${wingetParts.join(' ')}\n\n`;
-        if (finalChocoApps.length && state.options.enableChoco) plain += `# Chocolatey Install\nchoco install ${finalChocoApps.join(' ')} ${chocoOpts.join(' ')}\n`;
-        return plain.trim();
-    }
-
-    function buildBootstrapPS({ wingetApps, chocoApps }) {
-        const plain = buildPlainCommands({ wingetApps, chocoApps });
-        const lines = [
-            `# Requires: PowerShell 5.1+, Internet connectivity`,
-            `# Elevate if not admin`,
-            `if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {`,
-            `  Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -Command \`"& {Start-Transcript -Path .\\noninite-install.log -Append; & '$PSCommandPath'}\`"";`,
-            `  exit;`,
-            `}`,
-            ``,
-            `# Check for Winget`,
-            `if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {`,
-            `    Write-Host "Winget not found. Attempting to install from Microsoft Store..." -ForegroundColor Yellow`,
-            `    try {`,
-            `        Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe`,
-            `        Write-Host "Winget (App Installer) registration attempted. Please re-run the script if installs fail." -ForegroundColor Green`,
-            `    } catch {`,
-            `        Write-Host "Failed to automatically register Winget. Please install 'App Installer' from the Microsoft Store." -ForegroundColor Red`,
-            `        exit;`,
-            `    }`,
-            `}`,
-            ``,
-            `# Ensure Chocolatey (optional)`,
-            `function Ensure-Chocolatey {`,
-            `  if (Get-Command choco -ErrorAction SilentlyContinue) { return }`,
-            `  Write-Host "Installing Chocolatey..." -ForegroundColor Cyan`,
-            `  Set-ExecutionPolicy Bypass -Scope Process -Force;`,
-            `  [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;`,
-            `  Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))`,
-            `}`,
-            ``,
-            `$needChoco = ${(state.options.enableChoco && chocoApps.length > 0) ? '$true' : '$false'}`,
-            `if ($needChoco) { Ensure-Chocolatey }`,
-            ``,
-            `# Run installs`,
-            `Write-Host "Starting installs..." -ForegroundColor Green`,
-            `${plain}`,
-            ``,
-            `Write-Host "Done." -ForegroundColor Green`
-        ];
-        return lines.join('\n');
-    }
-
-    function generateAndShowScript() {
-        const { wingetApps, chocoApps } = getSelections();
-        const plain = buildPlainCommands({ wingetApps, chocoApps });
-        const ps = state.options.bootstrap ? buildBootstrapPS({ wingetApps, chocoApps }) : plain;
-        $('#plain-commands-output').val(plain);
-        $('#ps-bootstrap-output').val(ps);
-        openOverlay('.script-modal-overlay', '.script-modal');
-    }
-
-    // ---------- Presets, Config, Overlays, etc. ----------
-    function applyPreset(presetName) {
-        const p = state.presets.find(x => x.name === presetName);
-        if (!p) return;
-        $('.app-checkbox').prop('checked', false);
-        (p.items || []).forEach(itemName => {
-            const app = appByName(itemName);
-            if (!app) return;
-            const src = preferredSourceFor(app);
-            if (!src) return;
-            const val = src === 'winget' ? app.wingetId : app.chocoId;
-            $(`.app-checkbox[data-type="${src}"][value="${cssEscape(val)}"]`).prop('checked', true);
-        });
-        updateGetButton();
-    }
-    function refreshPresetSelects() {
-        const $sel = $('#preset-select').empty().append(`<option value="">Apply preset...</option>`);
-        state.presets.forEach(p => $sel.append(`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`));
-        const $list = $('#preset-list').empty();
-        state.presets.forEach(p => $list.append(`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`));
-    }
-    function exportConfig() {
-        const json = JSON.stringify(state, null, 2);
-        GM_setClipboard(json, 'text');
-        alert('Configuration copied to clipboard!');
-    }
-    function importConfigFromPrompt() {
-        const val = window.prompt('Paste exported JSON config here:');
-        if (!val) return;
-        try {
-            const obj = JSON.parse(val);
-            Object.assign(state, obj);
-            saveState();
-            location.reload();
-        } catch { alert('Invalid JSON.'); }
-    }
-    function openOverlay(overlaySel, modalSel) {
-        const $ov = $(overlaySel), $md = $(modalSel);
-        $ov.css('display', 'flex'); setTimeout(() => { $ov.css('opacity', 1); $md.css('transform', 'scale(1)'); }, 10);
-    }
-    function closeOverlay(overlaySel, modalSel) {
-        const $ov = $(overlaySel), $md = $(modalSel);
-        $ov.css('opacity', 0); $md.css('transform', 'scale(0.95)'); setTimeout(() => $ov.css('display', 'none'), 300);
-    }
-
-    // ---------- Utils ----------
-    function setFavicon(url) {
-        let link = document.querySelector("link[rel~='icon']");
-        if (!link) {
-            link = document.createElement('link');
-            link.rel = 'icon';
-            document.getElementsByTagName('head')[0].appendChild(link);
-        }
-        link.href = url;
-    }
-    function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-    function cssEscape(s) { return String(s).replace(/([!"#$%&'()*+,./:;<=>?@[\]^`{|}~])/g, '\\$1'); }
-    function prettyTag(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
-    function rebuildStacksSidebar() {
-        if (!state.options.enableStacks) $('#left-rail').addClass('hidden').empty();
-        else $('#left-rail').removeClass('hidden').html(generateStacksHTML());
-        $('.stack-filter').on('change', () => { populateAppGrid(); updateGetButton(); });
-    }
-    function downloadToFile(content, filename, contentType) {
-        const a = document.createElement('a');
-        const file = new Blob([content], {type: contentType});
-        a.href = URL.createObjectURL(file);
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(a.href);
-    }
-
-    // ---------- Init ----------
-    window.addEventListener('DOMContentLoaded', async function () {
-        buildUI();
-        document.title = 'NoNinite';
-        setFavicon('https://raw.githubusercontent.com/SysAdminDoc/NoNinite/refs/heads/main/assets/icons/favicon.ico');
-        applyTheme();
-
-        try {
-            const apps = await fetchAndProcessApps();
-            state.appData = apps;
-            $('#loading-indicator').hide();
-            $('#pro-control-app-container').show();
-        } catch (error) {
-            $('#loading-indicator').text(error).css('color', 'red');
-             if (Object.keys(state.appData).length > 0) {
-                 $('#loading-indicator').hide();
-                 $('#pro-control-app-container').show();
-                 alert("Could not fetch the latest app list. Using the last saved version.");
-             } else return;
-        } finally {
-             $('body').css('visibility', 'visible');
-        }
-
-        populateAppGrid();
-        buildFuseIndex();
-        loadFromHash();
-        deduplicateSelectionsFromURL();
-        updateGetButton();
-        refreshPresetSelects();
-
-        // --- Event Listeners ---
-
-        // Tooltip logic
-        let tooltipTimer;
-        const $tooltip = $('#app-tooltip');
-
-        $(document).on('mouseenter', '.app-item-label', function() {
-            const $label = $(this);
-            clearTimeout(tooltipTimer);
-
-            const appName = $label.closest('li').data('app-name');
-            const app = appByName(appName);
-            if (!app) return;
-
-            const faviconSrc = $label.find('.app-favicon').attr('src');
-            const linkHTML = app.link && app.link !== '#' ? `<a id="app-tooltip-link" href="${escapeHtml(app.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(app.link)}</a>` : 'No URL provided';
-
-            $tooltip.html(`
-                <div id="app-tooltip-header">
-                    <img id="app-tooltip-favicon" src="${escapeHtml(faviconSrc)}" alt="">
-                    <strong id="app-tooltip-name">${escapeHtml(app.name)}</strong>
-                </div>
-                <p id="app-tooltip-desc">${escapeHtml(app.description || 'No description available.')}</p>
-                ${linkHTML}
-            `);
-
-            const labelRect = $label[0].getBoundingClientRect();
-            $tooltip.css({
-                top: `${labelRect.top + window.scrollY - 20}px`,
-                left: `${labelRect.right + window.scrollX - 20}px`,
-                display: 'block',
-                opacity: 0
-            }).animate({ opacity: 1 }, 150);
-
-        }).on('mouseleave', '.app-item-label', function() {
-            tooltipTimer = setTimeout(() => {
-                $tooltip.stop().animate({ opacity: 0 }, 150, () => $tooltip.hide());
-            }, 300);
-        });
-
-        $tooltip.on('mouseenter', function() {
-            clearTimeout(tooltipTimer);
-        }).on('mouseleave', function() {
-            tooltipTimer = setTimeout(() => {
-                $tooltip.stop().animate({ opacity: 0 }, 150, () => $tooltip.hide());
-            }, 300);
-        });
-
-
-        $('#theme-toggle-btn').on('click', () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); saveState(); });
-        $('#settings-btn').on('click', () => openOverlay('.settings-modal-overlay', '.settings-modal'));
-        $('#close-settings-modal-btn').on('click', () => closeOverlay('.settings-modal-overlay', '.settings-modal'));
-        $('.settings-modal-overlay').on('click', function(e) { if ($(e.target).is('.settings-modal-overlay')) closeOverlay('.settings-modal-overlay', '.settings-modal'); });
-
-        $('#get-script-btn').on('click', generateAndShowScript);
-        $('#close-script-modal-btn').on('click', () => closeOverlay('.script-modal-overlay', '.script-modal'));
-        $('.script-modal-overlay').on('click', function(e) { if ($(e.target).is('.script-modal-overlay')) closeOverlay('.script-modal-overlay', '.script-modal'); });
-
-        $('#download-ps-btn').on('click', function() {
-            const content = $('#ps-bootstrap-output').val();
-            downloadToFile(content, 'NoNinite-Bootstrap.ps1', 'application/octet-stream');
-        });
-        $('#download-plain-btn').on('click', function() {
-            const content = $('#plain-commands-output').val();
-            downloadToFile(content, 'NoNinite-Commands.ps1', 'application/octet-stream');
-        });
-
-        $('#copy-ps-btn, #copy-plain-btn, #copy-script-btn').on('click', function() {
-            const btnId = $(this).attr('id');
-            let textToCopy = '';
-            if (btnId === 'copy-ps-btn') textToCopy = $('#ps-bootstrap-output').val();
-            else if (btnId === 'copy-plain-btn') textToCopy = $('#plain-commands-output').val();
-            else textToCopy = `# Bootstrap\n${$('#ps-bootstrap-output').val()}\n\n# Plain\n${$('#plain-commands-output').val()}`;
-            GM_setClipboard(textToCopy, 'text');
-            const originalText = $(this).text();
-            $(this).text('Copied!');
-            setTimeout(() => $(this).text(originalText), 1500);
-        });
-
-        $('#preset-select').on('change', function () {
-            const name = $(this).val();
-            if (name) applyPreset(name);
-            $(this).val('');
-        });
-
-        $('#winget-scope').val(state.options.wingetScope);
-        ['wingetSilent', 'wingetDisableInteractivity', 'wingetAccept', 'chocoY', 'chocoNoProgress', 'bootstrap', 'enableWinget', 'enableChoco', 'enableStacks', 'editMode'].forEach(opt => {
-            const kebabCase = opt.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
-            $(`#opt-${kebabCase}`).prop('checked', state.options[opt] !== undefined ? state.options[opt] : state[opt]);
-        });
-
-        $('#generator-options, #ui-options').on('change', 'input, select', function () {
-            const isDisablingWinget = $(this).attr('id') === 'opt-enable-winget' && !this.checked;
-            const isDisablingChoco = $(this).attr('id') === 'opt-enable-choco' && !this.checked;
-
-            if (isDisablingWinget && !$('#opt-enable-choco').is(':checked')) {
-                alert('At least one package manager (Winget/Choco) must be enabled.');
-                $(this).prop('checked', true);
-                return;
-            }
-            if (isDisablingChoco && !$('#opt-enable-winget').is(':checked')) {
-                alert('At least one package manager (Winget/Choco) must be enabled.');
-                $(this).prop('checked', true);
-                return;
-            }
-
-            state.options.wingetScope = $('#winget-scope').val();
-            state.options.wingetSilent = $('#opt-winget-silent').is(':checked');
-            state.options.wingetDisableInteractivity = $('#opt-winget-disable-interactivity').is(':checked');
-            state.options.wingetAccept = $('#opt-winget-accept').is(':checked');
-            state.options.chocoY = $('#opt-choco-noninteractive').is(':checked');
-            state.options.chocoNoProgress = $('#opt-choco-noprogress').is(':checked');
-            state.options.bootstrap = $('#opt-bootstrap').is(':checked');
-            state.options.enableWinget = $('#opt-enable-winget').is(':checked');
-            state.options.enableChoco = $('#opt-enable-choco').is(':checked');
-            state.options.enableStacks = $('#opt-enable-stacks').is(':checked');
-            state.editMode = $('#opt-edit-mode').is(':checked');
-
-            saveState();
-            toggleEditModeUI(state.editMode);
-            rebuildStacksSidebar();
-            populateAppGrid();
-            updateGetButton();
-        });
-
-        $(document).on('change', '.stack-filter', populateAppGrid);
-        $('#preset-list').on('change', function() {
-            const preset = state.presets.find(p => p.name === $(this).val());
-            if (preset) {
-                $('#preset-name').val(preset.name);
-                $('#preset-items').val((preset.items || []).join(', '));
-            }
-        });
-        $('#add-preset-btn').on('click', () => {
-            const name = $('#preset-name').val().trim();
-            if (!name) return alert('Preset name required.');
-            const items = $('#preset-items').val().split(',').map(s => s.trim()).filter(Boolean);
-            const idx = state.presets.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
-            if (idx >= 0) state.presets[idx].items = items;
-            else state.presets.push({ name, items });
-            saveState(); refreshPresetSelects();
-            $('#preset-name, #preset-items').val('');
-        });
-        $('#delete-preset-btn').on('click', () => {
-            const sel = $('#preset-list').val(); if (!sel) return;
-            state.presets = state.presets.filter(p => p.name !== sel);
-            saveState(); refreshPresetSelects(); $('#preset-name, #preset-items').val('');
-        });
-        $('#export-presets-btn').on('click', () => { GM_setClipboard(JSON.stringify(state.presets, null, 2), 'text'); alert('Presets copied.'); });
-        $('#import-presets-btn').on('click', () => {
-             const val = window.prompt('Paste Presets JSON:'); if (!val) return;
-             try { const arr = JSON.parse(val); if (Array.isArray(arr)) { state.presets = arr; saveState(); refreshPresetSelects(); alert('Presets imported.'); } else alert('Invalid format.'); } catch { alert('Invalid JSON.'); }
-        });
-
-        $('#clear-all-btn').on('click', () => {
-            $('.app-checkbox:checked').prop('checked', false).trigger('change');
-        });
-
-        $(document).on('click', '.chip', function() {
-            const type = $(this).data('type');
-            const id = $(this).data('id');
-            $(`.app-checkbox[data-type="${type}"][value="${id}"]`).prop('checked', false).trigger('change');
-        });
-
-        $(document).on('click', '.category-header', function () {
-            const categoryName = $(this).closest('.homepage-app-section').data('category');
-            state.collapsedCategories[categoryName] = !state.collapsedCategories[categoryName];
-            $(this).toggleClass('collapsed').siblings('.app-list').toggleClass('collapsed');
-            saveState();
-            setTimeout(() => $('.js-masonry').masonry('layout'), 350);
-        });
-
-        $(document).on('change', '.app-checkbox', updateGetButton);
-        $(document).on('click', '.app-item-label', function(e) {
-            if ($(e.target).is('input') || $(e.target).closest('label').length) {
-                return;
-            }
+    // -----------------------------------------------------------------------------
+    //  EVENT LISTENERS
+    // -----------------------------------------------------------------------------
+
+    function attachEventListeners() {
+        const $root = $('#noninite-root');
+
+        // Header
+        $root.on('click', '#nn-theme-toggle', (e) => {
             e.preventDefault();
+            state.theme = state.theme === 'dark' ? 'light' : 'dark';
+            applyTheme();
+            saveState('theme');
+        });
+        $root.on('click', '#nn-help-btn, #nn-close-modal-btn', e => {
+            e.preventDefault();
+            toggleHelpModal();
+        });
+        const debouncedSearch = debounce(() => masterRender(), SEARCH_DEBOUNCE_MS);
+        $root.on('input', '#nn-search-input', e => {
+            const newSearch = $(e.currentTarget).val();
+            if(newSearch !== state.filters.search){
+                 state.filters.search = newSearch;
+                 debouncedSearch();
+            }
+        });
 
-            const singleManagerMode = state.options.enableWinget !== state.options.enableChoco;
+        // Nav & Toolbar
+        $root.on('click', '#nn-view-tabs .nn-tab-btn', e => {
+            e.preventDefault();
+            switchView($(e.currentTarget).data('view'));
+        });
+        $root.on('change', '#nn-sort-by', e => {
+            state.options.sortBy = $(e.currentTarget).val();
+            saveState('options');
+            masterRender();
+        });
 
-            if (singleManagerMode) {
-                const $checkbox = $(this).find('.app-checkbox');
-                $checkbox.prop('checked', !$checkbox.prop('checked')).trigger('change');
+        // Filter Rail
+        $root.on('change', '#nn-filter-rail input', e => {
+            const $input = $(e.currentTarget);
+            const name = $input.attr('name');
+            const value = $input.val();
+            const type = $input.attr('type');
+            lastSearchQuery = null; // Force re-filter
+
+            if (type === 'radio') {
+                state.filters[name] = value;
+            } else if (type === 'checkbox') {
+                const current = state.filters[name] || [];
+                if ($input.is(':checked')) {
+                    current.push(value);
+                } else {
+                    const index = current.indexOf(value);
+                    if (index > -1) current.splice(index, 1);
+                }
+                state.filters[name] = [...new Set(current)];
+            }
+            saveState('filters');
+            masterRender();
+        });
+        $root.on('click', '#nn-filter-rail .nn-tag-chip', e => {
+            const $chip = $(e.currentTarget);
+            const tag = $chip.data('tag');
+            const current = state.filters.tags || [];
+            const index = current.indexOf(tag);
+            lastSearchQuery = null; // Force re-filter
+
+            if (index > -1) current.splice(index, 1);
+            else current.push(tag);
+
+            state.filters.tags = current;
+            $chip.toggleClass('nn-active');
+            saveState('filters');
+            masterRender();
+        });
+
+        // App Selection
+        $root.on('click', '.nn-installer-toggle', e => {
+            e.preventDefault(); e.stopPropagation();
+            const $btn = $(e.currentTarget);
+            const appName = $btn.closest('[data-app-name]').attr('data-app-name');
+            const installerType = $btn.data('type');
+
+            if ($btn.hasClass('nn-selected')) {
+                delete state.selection[appName];
             } else {
-                const appName = $(this).closest('li').data('app-name');
-                const app = appByName(appName);
-                if (!app) return;
-                const preferredSrc = preferredSourceFor(app);
-                if (!preferredSrc) return;
-                const $preferredCheckbox = $(this).find(`.app-checkbox[data-type="${preferredSrc}"]`);
-                if ($preferredCheckbox.length === 0) return;
-
-                const wasChecked = $preferredCheckbox.prop('checked');
-                $(this).find('.app-checkbox').prop('checked', false);
-                $preferredCheckbox.prop('checked', !wasChecked);
-                $(this).find('.app-checkbox').first().trigger('change');
+                state.selection[appName] = installerType;
             }
+            saveState('selection');
+            updateSelectionStateOnItems();
+            updateSelectionUI();
         });
+        $root.on('click', '.nn-app-list-item, .nn-app-card', e => {
+            const $target = $(e.target);
+            if ($target.is('button') || $target.closest('button').length) return;
+             const $item = $(e.currentTarget);
+             const appName = $item.attr('data-app-name');
+             const app = state.allApps.find(a => a.name === appName);
+             if (!app) return;
 
-
-        $(document).on('keydown', (e) => {
-            const $input = $('#global-search');
-            if (e.key === '/' && document.activeElement !== $input[0]) {
-                e.preventDefault(); $input.focus().select();
-            } else if (document.activeElement === $input[0]) {
-                if (kbMatches.length === 0) return;
-                if (e.key === 'ArrowDown') { e.preventDefault(); kbIndex = (kbIndex + 1) % kbMatches.length; highlightByName(kbMatches[kbIndex].name); }
-                else if (e.key === 'ArrowUp') { e.preventDefault(); kbIndex = (kbIndex - 1 + kbMatches.length) % kbMatches.length; highlightByName(kbMatches[kbIndex].name); }
-                else if (e.key === 'Enter') { e.preventDefault(); toggleFocused(); }
-                else if (e.key === 'Escape') { $input.val('').trigger('input'); }
-            }
+             const preferredInstaller = app.facets.installers.winget ? 'winget' : 'choco';
+             if (state.selection[appName]) {
+                 delete state.selection[appName];
+             } else {
+                 state.selection[appName] = preferredInstaller;
+             }
+            saveState('selection');
+            updateSelectionStateOnItems();
+            updateSelectionUI();
         });
+        $root.on('click', '.nn-preset-card', (e) => {
+            const presetName = $(e.currentTarget).data('preset-name');
+            const preset = state.presets.find(p => p.name === presetName);
+            if (!preset) return;
 
-        function doSearch(query) {
-            const $sections = $('.homepage-app-section');
-            kbIndex = -1;
-            kbMatches = [];
-            clearHighlights();
-
-            if (!query) {
-                $sections.show();
-                $sections.find('li[data-app-name]').show();
-                $('.js-masonry').masonry('layout');
-                return;
-            }
-
-            const results = fuse.search(query);
-            const visibleApps = new Set(results.map(r => r.item.name));
-            kbMatches = results.map(r => r.item);
-
-            $sections.each(function() {
-                let hasVisibleApp = false;
-                $(this).find('li[data-app-name]').each(function() {
-                    const appName = $(this).data('app-name');
-                    if (visibleApps.has(appName)) {
-                        $(this).show();
-                        hasVisibleApp = true;
-                    } else {
-                        $(this).hide();
-                    }
-                });
-                if (hasVisibleApp) $(this).show();
-                else $(this).hide();
+            preset.items.forEach(appName => {
+                const app = state.allApps.find(a => a.name === appName);
+                if (app) {
+                    const installer = app.facets.installers.winget ? 'winget' : 'choco';
+                    state.selection[appName] = installer;
+                }
             });
+            saveState('selection');
+            updateSelectionStateOnItems();
+            updateSelectionUI();
+            showToast(`Preset "${preset.name}" added to selection.`, 3000, 'success');
+        });
 
-            if (kbMatches.length > 0) {
-                kbIndex = 0;
-                highlightByName(kbMatches[0].name);
+        // Drawer
+        $root.on('click', '#nn-open-drawer-btn, #nn-close-drawer-btn, .nn-selection-drawer-scrim', e => {
+             e.preventDefault();
+             toggleDrawer();
+        });
+        $root.on('click', '#nn-selection-drawer .nn-installer-toggle', e => {
+            const $btn = $(e.currentTarget);
+            const appName = $btn.closest('[data-app-name]').attr('data-app-name');
+            const newType = $btn.data('type');
+            state.selection[appName] = newType;
+            saveState('selection');
+            renderSelectionDrawer();
+        });
+        $root.on('click', '#nn-selection-drawer .nn-remove-item', e => {
+            const $btn = $(e.currentTarget);
+            const appName = $btn.closest('[data-app-name]').attr('data-app-name');
+            delete state.selection[appName];
+            saveState('selection');
+            updateSelectionStateOnItems();
+            updateSelectionUI();
+            renderSelectionDrawer();
+        });
+
+        $root.on('change', '#nn-script-options-form input', e => {
+            const $input = $(e.currentTarget);
+            const name = $input.attr('name');
+            state.scriptOptions[name] = $input.is(':checkbox') ? $input.is(':checked') : $input.val();
+            saveState('scriptOptions');
+            generateScript();
+        });
+        $root.on('click', '.nn-script-preview-tab', e => {
+            const type = $(e.currentTarget).data('type');
+            state.scriptOptions.type = type;
+            $('.nn-script-preview-tab').removeClass('nn-active');
+            $(e.currentTarget).addClass('nn-active');
+            renderSelectionDrawer();
+        });
+        $root.on('click', '#nn-copy-script-btn', () => {
+            GM_setClipboard($('#nn-script-preview').text());
+            showToast('Script copied to clipboard!', 2000, 'success');
+        });
+        $root.on('click', '#nn-download-script-btn', () => {
+            const scriptContent = $('#nn-script-preview').text();
+            const type = state.scriptOptions.type;
+            const ext = type === 'powershell' ? 'ps1' : 'cmd';
+            const filename = `NoNinite-Install-${new Date().toISOString().slice(0,10)}.${ext}`;
+            const blob = new Blob([scriptContent], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+
+        // Keyboard shortcuts
+        $(document).on('keydown', e => {
+            const activeEl = document.activeElement;
+            const isInput = ['input', 'select', 'textarea'].includes(activeEl.tagName.toLowerCase());
+
+            if (e.key === '?' && !isInput) {
+                e.preventDefault();
+                toggleHelpModal();
+            } else if (e.key === 't' && !isInput) {
+                e.preventDefault();
+                $('#nn-theme-toggle').click();
+            } else if (e.key === 'g' && !isInput) {
+                e.preventDefault();
+                toggleDrawer();
+            } else if (e.key === '/' && !isInput) {
+                e.preventDefault();
+                $('#nn-search-input').focus().select();
+            } else if (e.key === 'Escape') {
+                if (state.isHelpOpen) toggleHelpModal(false);
+                else if (state.isSelectionDrawerOpen) toggleDrawer(false);
+                else if ($('#nn-search-input').val()) {
+                    $('#nn-search-input').val('').trigger('input');
+                } else if(activeEl !== document.body) {
+                    activeEl.blur();
+                }
+            } else if (['ArrowDown', 'ArrowUp'].includes(e.key) && !isInput) {
+                 e.preventDefault();
+                 const navigatables = $('.nn-results-area [tabindex="0"]:visible');
+                 let index = navigatables.index(activeEl);
+                 if (e.key === 'ArrowDown') index = (index + 1) % navigatables.length;
+                 else if (e.key === 'ArrowUp') index = (index - 1 + navigatables.length) % navigatables.length;
+                 navigatables.eq(index).focus();
+            } else if ([' ', 'Enter'].includes(e.key) && $(activeEl).is('[tabindex="0"]')) {
+                 e.preventDefault();
+                 $(activeEl).click();
             }
+        });
+    }
 
-            $('.js-masonry').masonry('layout');
+    // -----------------------------------------------------------------------------
+    //  INITIALIZATION
+    // -----------------------------------------------------------------------------
+
+    async function init() {
+        document.title = 'NoNinite Installer';
+        if ($('link[rel="icon"]').length) {
+            $('link[rel="icon"]').attr('href', GENERIC_ICON_URL);
+        } else {
+            $('head').append(`<link rel="icon" href="${GENERIC_ICON_URL}" type="image/x-icon">`);
         }
 
+        injectStyles();
+        buildSkeleton();
+        loadState();
 
-        $(document).on('input', '#global-search', function () { doSearch(this.value.trim()); });
-        $('#export-config-btn').on('click', exportConfig);
-        $('#import-config-btn').on('click', importConfigFromPrompt);
-        $('#reset-config-btn').on('click', async function () {
-            if (!confirm('This will delete ALL your custom presets, settings, and the cached app list. Are you sure?')) return;
-            const keys = await GM_listValues();
-            for (const key of keys) GM_deleteValue(key);
-            alert('Configuration has been reset. The page will now reload.');
-            location.reload();
-        });
-    });
+        const $loading = $('#loading-indicator');
+        try {
+            const rawData = await fetchCatalogData();
+            processAndEnrichData(rawData);
+
+            applyTheme();
+            populateStaticControls();
+            renderFilterRail(); // Render rail with disabled options if needed
+            switchView(state.viewMode, true);
+            masterRender();
+            updateSelectionUI();
+
+            $('body').css('visibility', 'visible');
+            $loading.hide();
+
+            idleCallback(() => {
+                processDeferredData();
+                initializeSearch();
+                renderFilterRail(); // Re-render with tags
+                masterRender();
+            });
+
+            attachEventListeners();
+
+        } catch (error) {
+            $loading.text(String(error)).css({ color: 'var(--nn-text-danger)' });
+            console.error('NoNinite Init Error:', error);
+            showToast(String(error), 5000, 'error');
+            $('body').css('visibility', 'visible');
+            return;
+        }
+    }
+
+    init();
+
 })();
